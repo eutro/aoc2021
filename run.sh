@@ -3,7 +3,7 @@
 DIR="$(readlink -f $(dirname "$0"))"
 DAYP="$(printf "%02d" "$1")"
 
-"$DIR/cmp.sh" "$1"
+"$DIR/cmp.sh" "$1" || exit 1
 
 if [ "$2" = "--" ]
 then "$DIR/out/Day$DAYP" < /dev/stdin

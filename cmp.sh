@@ -7,3 +7,4 @@ shift
 mkdir -p "$DIR/out"
 cd "$DIR/src"
 ghc "$@"-o "$DIR/out/Day$DAYP" "$DIR/src/Day$DAYP.hs"
+exit $?
