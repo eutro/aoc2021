@@ -1,8 +1,13 @@
 #!/usr/bin/env sh
 
 DIR="$(readlink -f $(dirname "$0"))"
-DAYP="$(printf "%02d" "$1")"
-shift
+if [ -z "$1" ]
+then DAY="$(date +%d)"
+else
+    DAY="$1"
+    shift
+fi
+DAYP="$(printf "%02d" "$DAY")"
 
 mkdir -p "$DIR/out"
 cd "$DIR/src"

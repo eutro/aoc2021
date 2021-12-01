@@ -1,15 +1,19 @@
 #!/usr/bin/env sh
 
 DIR="$(readlink -f $(dirname "$0"))"
-DAYP="$(printf "%02d" "$1")"
+if [ -z "$1" ]
+then DAY="$(date +%d)"
+else DAY="$1"
+fi
+DAYP="$(printf "%02d" "$DAY")"
 
-"$DIR/cmp.sh" "$1" || exit 1
+"$DIR/cmp.sh" "$DAY" || exit 1
 
 if [ "$2" = "--" ]
 then "$DIR/out/Day$DAYP" < /dev/stdin
 else
     if [ ! -f "$DIR/input/Day$DAYP.txt" ]
-       then "$DIR/fetch.sh" "$1" || exit 1
+       then "$DIR/fetch.sh" "$DAY" || exit 1
     fi
     "$DIR/out/Day$DAYP" < "$DIR/input/Day$DAYP.txt"
 fi

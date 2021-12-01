@@ -5,8 +5,12 @@ cd "$DIR" || exit 1
 
 KEY="$(cat session.key)"
 
-DAY="$(printf "%d" "$1")"
-DAYP="$(printf "%02d" "$1")"
+if [ -z "$1" ]
+then DAYX="$(date +%d)"
+else DAYX="$1"
+fi
+DAY="$(printf "%d" "$DAYX")"
+DAYP="$(printf "%02d" "$DAYX")"
 
 mkdir -p input
 echo "Fetching day $DAY..."
