@@ -1,12 +1,10 @@
 main :: IO ()
 main = getContents
-  >>= (($ (drop 3))
-       . ($ tail)
-       . (($) >>= ((.) . (($ (>>)) . ((.) . flip (.)))))
-       . (flip $ ((putStrLn . show . length . filter id) .)
-          . (>>= (flip (zipWith (<)))))
-       . map (read :: String -> Int)
-       . lines)
+  >>= ($ (drop 3)) . ($ tail)
+  . (($) >>= (.) . ($ (>>)) . (.) . flip (.))
+  . (.) (putStrLn . show . length . filter id)
+  . flip (>>= (flip $ zipWith (<)))
+  . map (read :: String -> Int) . lines
 
 main1 = do
   input <- getContents
