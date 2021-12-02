@@ -1,26 +1,35 @@
-import qualified Data.Set as Set
 import qualified Data.Map as Map
-import qualified Text.ParserCombinators.ReadP as RP
-import Data.List
 import Data.Maybe
-import Data.Char
-import Debug.Trace
 import Util
 
 main :: IO ()
 main = getContents
-  >>= ($ [("forward", \h d a x -> ((h + x, d + a * x), a)),
-          ("up", \h d a x -> ((h, d), a - x)),
-          ("down", \h d a x -> ((h, d), a + x))])
-  . ($ [("forward", \h d a x -> ((h + x, d), a)),
-        ("up", \h d a x -> ((h, d - x), a)),
-        ("down", \h d a x -> ((h, d + x), a))])
+  >>= ($ [("forward", -- \ x h d a -> ((h + x, d + a * x), a)
+            (flip (.) (+) . (.)
+             . ((.) (flip (.) (+))
+                . flip (.) ((.) . curry id)
+                . (.)
+                . ((.) (flip (>>=) (curry id))
+                   . flip (.) . (*))))
+            >>= ($)),
+          ("up", -- \ x h d a -> ((h, d), a - x)
+            flip (.) (curry id) . (.) . (flip (.) (curry id) . flip (.) . flip (-))),
+          ("down", -- \ x h d a -> ((h, d), a + x)
+            flip (.) (curry id) . (.) . (flip (.) (curry id) . flip (.) . (+)))])
+  . ($ [("forward", -- \ x h d a -> ((h + x, d), a)
+          (.) ((.) (curry id) . curry id) . (+)),
+        ("up", -- \ x h d a -> ((h, d - x), a)
+          flip (.) ((.) (curry id) . curry id) . flip (.) . flip (-)),
+        ("down", -- \ x h d a -> ((h, d + x), a)
+          flip (.) ((.) (curry id) . curry id) . flip (.) . (+))])
   . (($) >>= (.) . ($ (>>)) . (.) . flip (.))
   . flip
   (((.) (putStrLn . show . uncurry (*) . fst))
    . flip foldl ((0, 0), 0)
-   . (uncurry .) . flip
-   . ((.) (uncurry . uncurry . fromJust))
+   . (uncurry .)
+   . flip . ((.) (uncurry . uncurry
+                  . (.) ((.) flip . flip) . flip
+                  . fromJust))
    . flip Map.lookup
    . Map.fromList)
   . (flip (.) (map ((read :: String -> Int) . head . tail))
