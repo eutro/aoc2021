@@ -10,20 +10,19 @@ import Util
 main :: IO ()
 main = do
   input <- getContents
-  let insns = map (splitOn " ") (lines input)
-  loop 0 0 insns
-  loop2 0 0 0 insns
-  where loop horiz depth [] = putStrLn $ show (horiz * depth)
-        loop horiz depth ([dir, mag]:tail) =
-          let magn = read mag :: Int in
-            case dir of
-              "forward" -> loop (horiz + magn) depth tail
-              "up" -> loop horiz (depth - magn) tail
-              "down" -> loop horiz (depth + magn) tail
-        loop2 horiz depth aim [] = putStrLn $ show (horiz * depth)
-        loop2 horiz depth aim ([dir, mag]:tail) =
-          let magn = read mag :: Int in
-            case dir of
-              "forward" -> loop2 (horiz + magn) (depth + aim * magn) aim tail
-              "up" -> loop2 horiz depth (aim - magn) tail
-              "down" -> loop2 horiz depth (aim + magn) tail
+  let insns' = map (splitOn " ") (lines input)
+  let insns = zipWith (curry id) (map head insns') (map ((read :: String -> Int) . head . tail) insns')
+  solve advance1 insns
+  solve advance2 insns
+  where solve foldf insns =
+          putStrLn $ show $ uncurry (*) $ fst $ foldl foldf ((0, 0), 0) insns
+        advance1 ((h, d), a) (dir, x) =
+          case dir of
+            "forward" -> ((h + x, d), a)
+            "up" -> ((h, d - x), a)
+            "down" -> ((h, d + x), a)
+        advance2 ((h, d), a) (dir, x) =
+          case dir of
+            "forward" -> ((h + x, d + a * x), a)
+            "up" -> ((h, d), a - x)
+            "down" -> ((h, d), a + x)
