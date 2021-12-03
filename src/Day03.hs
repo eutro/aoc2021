@@ -7,12 +7,9 @@ main = getContents
   (flip (($) >>= (.) . ($ (>>)) . (.) . flip (.))
    (flip $ flip (.)
     (flip (.) .
-     -- mostCommon
      (flip (.) (flip (.) (flip (!!)) . flip map)
       . (.) . flip (.) ((* 2) . length . filter id)
-      . (<=) . length >>= ($))
-     -- mostCommon
-    )
+      . (<=) . length >>= ($)))
     . (.) . (.) readBinBools . flip map))
   (flip
    . flip
@@ -24,11 +21,9 @@ main = getContents
        . (flip (.)
           . ((.) (flip (>>=) ($))
              . flip (.)
-             -- mostCommon
              (flip (.) (flip (.) (flip (!!)) . flip map)
               . (.) . flip (.) ((* 2) . length . filter id)
               . (<=) . length >>= ($))
-             -- /mostCommon
              . (.) . ((.) (flip (.) (flip (!!))) . flip (.) ((.) . (==)) . (.) . (.)))))))
   . (((.) ((.) ((.) (putStrLn . show) . flip (.) (flip ($) not) . (*) . flip ($) id >>= ($)))
        . flip (.) (curry range 0 . (subtract 1) . length . head)
