@@ -10,20 +10,23 @@ import Util
 main :: IO ()
 main = do
   input <- getContents
-  let ls = map (map (=='1')) $ lines input :: [[Bool]]
-  let len = length $ head ls
-  let mostCommon ls i =
-        let bs = map (!!i) ls
-            trues = length $ filter id bs
-            falses = length $ filter not bs
-        in trues >= falses
+  let ls = map (map (=='1')) $ lines input
+  let idcs = [0..(length (head ls) - 1)]
+  let mostCommon =
+        flip (.) (flip (.) (flip (!!)) . flip map)
+        . (.) . flip (.) ((* 2) . length . filter id)
+        . (<=) . length >>= ($)
   let comb f = putStrLn $ show $ (f id) * (f not)
-  comb (\f -> readBinBools $ map (f . mostCommon ls) [0..(len-1)])
-  let filterBits f =
+  comb $ flip (flip (.) (flip (.) . mostCommon) . (.) . (.) readBinBools . flip map) ls idcs
+  let filterBits func =
         readBinBools $ head $ foldl
-        (\ls i ->
-            if length ls == 1
-            then ls
-            else filter (f . (== (mostCommon ls i)) . (!!i)) ls)
-        ls [0..(len-1)]
+        ((flip (>>=) ($)
+          . flip (.)
+          ((.) . (>>=) (flip (.) (flip filter) . (.) . ((==) 1 . length >>= if')) ($))
+          . (flip (.)
+             . ((.) (flip (>>=) ($))
+                . flip (.) mostCommon
+                . (.) . ((.) (flip (.) (flip (!!))) . flip (.) ((.) . (==)) . (.) . (.)))))
+         func)
+        ls idcs
   comb filterBits

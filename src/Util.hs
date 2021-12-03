@@ -29,3 +29,7 @@ readBinBools = readBinDigits . map fromEnum
 
 readBinChars :: [Char] -> Int
 readBinChars =  readBinBools . map (== '1')
+
+if' :: Bool -> a -> a -> a
+if' True ifTrue _ = ifTrue
+if' False _ ifFalse = ifFalse
