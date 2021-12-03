@@ -17,3 +17,15 @@ split p = splitS (p . head)
 
 splitOn :: String -> String -> [String]
 splitOn s = splitS (isPrefixOf s)
+
+readBase :: Int -> [Int] -> Int
+readBase base digits = foldl ((+) . (* base)) 0 digits
+
+readBinDigits :: [Int] -> Int
+readBinDigits = readBase 2
+
+readBinBools :: [Bool] -> Int
+readBinBools = readBinDigits . map fromEnum
+
+readBinChars :: [Char] -> Int
+readBinChars =  readBinBools . map (== '1')
