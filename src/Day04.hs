@@ -7,15 +7,13 @@ import Data.Char
 import Debug.Trace
 import Util
 
-wonp :: (Set.Set Int) -> [[Int]] -> Bool
-wonp set board =
+hasWon :: (Set.Set Int) -> [[Int]] -> Bool
+hasWon set board =
   let bb = map (map (`Set.member` set)) board
-  in case ((filter (==[True,True,True,True,True]) bb) ++ (filter (==[True,True,True,True,True]) $ transpose bb)) of
-    [] -> False
-    _ -> True
+  in any (all id) bb || any (all id) (transpose bb)
 
-score :: (Set.Set Int) -> [[Int]] -> Int -> Int
-score set board called =
+score :: (Set.Set Int) -> Int -> [[Int]] -> Int
+score set called board =
   let flat = concat board
       uS = sum $ filter (not . (`Set.member` set)) flat
   in uS * called
@@ -26,16 +24,12 @@ main = do
   let (nums':boards') = splitOn "\n\n" input :: [String]
   let nums = map read $ splitOn "," nums' :: [Int]
   let boards = map (map (map read . words) . lines . tail) boards' :: [[[Int]]]
-  let loop set (n:ns) =
+  let loop set boards (n:ns) =
         let newS = Set.insert n set
-            unvict = filter (not . wonp newS) boards
-        in case unvict of
-             [unwon] -> let loop2 set (n:ns) =
-                              let newS = Set.insert n set in
-                                if wonp newS unwon
-                                then putStrLn $ show $ score newS unwon n
-                                else loop2 newS ns
-                        in loop2 newS ns
-             _ -> loop newS ns
-      loop set [] = putStrLn "Nobody won"
-  loop Set.empty nums
+            (vict, unvict) = partition (hasWon newS) boards
+        in map (score newS n) vict ++ loop newS unvict ns
+      loop set [] ns = []
+      loop set boards [] = []
+  let scores = loop Set.empty boards nums
+  putStrLn $ show $ head scores
+  putStrLn $ show $ last scores
