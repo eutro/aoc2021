@@ -23,13 +23,9 @@ main = do
   input <- getContents
   let (nums':boards') = splitOn "\n\n" input :: [String]
   let nums = map read $ splitOn "," nums' :: [Int]
-  let boards = map (map (map read . words) . lines . tail) boards' :: [[[Int]]]
-  let loop set boards (n:ns) =
-        let newS = Set.insert n set
-            (vict, unvict) = partition (hasWon newS) boards
-        in map (score newS n) vict ++ loop newS unvict ns
-      loop set [] ns = []
-      loop set boards [] = []
-  let scores = loop Set.empty boards nums
+  let boards = map (map (map read . words) . lines) boards' :: [[[Int]]]
+  let calledSets = tail $ scanl (flip Set.insert) Set.empty nums
+  let winningBoards = tail $ map fst $ scanl (\ (_,bs) set -> partition (hasWon set) bs) ([], boards) calledSets
+  let scores = concat $ zipWith3 ((.) map . score) calledSets nums winningBoards
   putStrLn $ show $ head scores
   putStrLn $ show $ last scores

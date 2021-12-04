@@ -16,7 +16,8 @@ split :: (Char -> Bool) -> String -> [String]
 split p = splitS (p . head)
 
 splitOn :: String -> String -> [String]
-splitOn s = splitS (isPrefixOf s)
+splitOn ss s = let (h : tail) = splitS (isPrefixOf ss) s
+               in h : (map (drop (length ss - 1)) tail)
 
 readBase :: Int -> [Int] -> Int
 readBase base digits = foldl ((+) . (* base)) 0 digits
