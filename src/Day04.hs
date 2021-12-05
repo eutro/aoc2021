@@ -11,7 +11,7 @@ main = getContents
    . (.) (flip (.) (tail . scanl (flip Set.insert) Set.empty) . (>>=) id)
    . flip (.) (zipWith3 $ (.) map . flip (.) ((. concat) . filter . (.) not . flip Set.member) . (.) . flip (.) sum . (*))
    . (.) . flip (.) . (.) (tail . map fst)
-   . scanl (flip (.)((.) (id >>= flip (.) (any (all id) . transpose) . (||) . any (all id)) . map . map . flip (Set.member))
+   . scanl (flip (.) ((.) (id >>= flip (.) (any (all id) . transpose) . (||) . any (all id)) . map . map . flip (Set.member))
             . flip partition . snd)
    . curry id []
    . map (map (map (read :: String -> Int) . words) . lines))
