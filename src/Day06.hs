@@ -17,11 +17,9 @@ main = do
   let timers = foldl (\m f -> Map.insertWith (+) f 1 m) Map.empty fish
   let updateKey m k v =
         if k == 0
-        then Map.insertWith (+) 8 v (Map.insertWith (+) 6 v m)
+        then Map.insertWith (+) 8 v $ Map.insertWith (+) 6 v m
         else Map.insertWith (+) (k - 1) v m
-  let updateTimers timers = Map.foldlWithKey updateKey Map.empty timers
-  let after80 = foldl (\t _ -> updateTimers t) timers [1..80]
-  let countFish m = Map.foldl (+) 0 m
-  let after256 = foldl (\t _ -> updateTimers t) timers [1..256]
-  print $ countFish after80
-  print $ countFish after256
+  let after n = foldl (flip $ const $ Map.foldlWithKey updateKey Map.empty) timers [1..n]
+  let countFish n = print $ Map.foldl (+) 0 $ after n
+  countFish 80
+  countFish 256
