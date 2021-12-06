@@ -3,8 +3,32 @@ import Data.Function
 import Data.Ix
 import Util
 
+-- import Matrix
+-- sumMat = [[1,1,1,1,1,1,1,1,1]]
+-- stepMat = [[0,1,0,0,0,0,0,0,0],
+--            [0,0,1,0,0,0,0,0,0],
+--            [0,0,0,1,0,0,0,0,0],
+--            [0,0,0,0,1,0,0,0,0],
+--            [0,0,0,0,0,1,0,0,0],
+--            [0,0,0,0,0,0,1,0,0],
+--            [1,0,0,0,0,0,0,1,0],
+--            [0,0,0,0,0,0,0,0,1],
+--            [1,0,0,0,0,0,0,0,0]]
+-- solveNVec n = head $ sumMat `mxm` (mpow n stepMat)
+-- solveNVec 256 = [6703087164,6206821033,5617089148,
+--                  5217223242,4726100874,4368232009,
+--                  3989468462,3649885552,3369186778]
+-- solveNVec 80 = [1421,1401,1191,1154,1034,950,905,779,768]
+-- -- input is in range [0,6), so we only need the first 6 terms below
+
 main :: IO ()
-main = getContents >>=
+main = getContents
+  >>= ([6703087164, 6206821033, 5617089148, 5217223242, 4726100874, 4368232009]&)
+  . ([1421,1401,1191, 1154,1034,950]&)
+  . on (>>) . ((print . sum) .) . (. (map . (!!))) . (&)
+  . map (read :: String -> Int) . splitOn ","
+
+main0 = getContents >>=
   (256&) . (80&) . on (>>) . (. curry range 1)
   . ((.) $ print . Map.foldl (+) 0)
   . foldl (flip $ const $ Map.foldlWithKey
