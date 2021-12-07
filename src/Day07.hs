@@ -11,13 +11,15 @@ import Debug.Trace
 import Util
 
 main :: IO ()
-main = do
-  input <- getContents
-  let poss = map read $ splitOn "," input :: [Int]
-  let distf f al = sum $ map (f . abs . subtract al) poss
-  let mindistf = (id >>=
-                     (. ((maximum poss &) . (minimum poss &) . binarySearch
-                         . (subtract 1 >>=) . on compare)) . ($))
-                 . distf
-  print $ mindistf id
-  print $ mindistf (\n -> (n * (n + 1)) `div` 2)
+main = getContents
+  >>= (((`div` 2) . ((+1) >>= (*)) &) . (id&) . on (>>))
+  . (.) print
+  . (. (. subtract) . (.) . (. abs))
+  . ((.) . ((>>=) id
+            . ((. ($)) .
+               flip (.) .
+               (. (binarySearch . (subtract 1 >>=) . on compare))
+               . (id >>= (. ((&) . minimum)) . (.) . ((&) . maximum))))
+     >>= (. ((.) . (((sum .) . (. map)) . (&)))))
+  . map (read :: String -> Int)
+  . splitOn ","
