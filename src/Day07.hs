@@ -14,7 +14,10 @@ main :: IO ()
 main = do
   input <- getContents
   let poss = map read $ splitOn "," input :: [Int]
-  let xrange = [minimum poss .. maximum poss]
-  let distf f = minimum $ map (\al -> sum $ map (f . abs . subtract al) poss) xrange
-  print $ distf id
-  print $ distf (\n -> (n * (n + 1)) `div` 2)
+  let distf f al = sum $ map (f . abs . subtract al) poss
+  let mindistf = (id >>=
+                     (. ((maximum poss &) . (minimum poss &) . binarySearch
+                         . (subtract 1 >>=) . on compare)) . ($))
+                 . distf
+  print $ mindistf id
+  print $ mindistf (\n -> (n * (n + 1)) `div` 2)

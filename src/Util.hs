@@ -1,6 +1,7 @@
 module Util where
 
 import Data.List
+import Debug.Trace
 
 splitS :: (String -> Bool) -> String -> [String]
 splitS pred s = case dropWhile pred (init $ tails s) of
@@ -34,3 +35,13 @@ readBinChars =  readBinBools . map (== '1')
 if' :: Bool -> a -> a -> a
 if' True ifTrue _ = ifTrue
 if' False _ ifFalse = ifFalse
+
+binarySearch :: Integral a => (a -> Ordering) -> a -> a -> a
+binarySearch f mn mx =
+  if mn >= mx
+  then mn
+  else let mid = (mn + mx) `div` 2 in
+         case f mid of
+           LT -> binarySearch f mn (mid - 1)
+           EQ -> mid
+           GT -> binarySearch f (mid + 1) mx
