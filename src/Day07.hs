@@ -14,8 +14,7 @@ main :: IO ()
 main = do
   input <- getContents
   let poss = map read $ splitOn "," input :: [Int]
-  let minv = minimum $ map (\al -> sum $ map (abs . subtract al) poss) [minimum poss .. maximum poss]
-  print minv
-  let tri n = (n * (n + 1)) `div` 2
-  let minv = minimum $ map (\al -> sum $ map (tri . abs . subtract al) poss) [minimum poss .. maximum poss]
-  print minv
+  let xrange = [minimum poss .. maximum poss]
+  let distf f = minimum $ map (\al -> sum $ map (f . abs . subtract al) poss) xrange
+  print $ distf id
+  print $ distf (\n -> (n * (n + 1)) `div` 2)
