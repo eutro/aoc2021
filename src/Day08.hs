@@ -21,11 +21,14 @@ main = do
                         (4, const $ (==4) . Set.size),
                         (7, const $ (==3) . Set.size),
                         (8, const $ (==7) . Set.size),
-                        (9, \ m set -> (m Map.! 4) `Set.isSubsetOf` set),
-                        (0, \ m set -> (Set.size set == 6) && (m Map.! 7) `Set.isSubsetOf` set),
-                        (3, \ m set -> (m Map.! 7) `Set.isSubsetOf` set),
+                        (9, Set.isSubsetOf . (Map.! 4)),
+                        (0, (.) ((Set.isSubsetOf . (Map.! 7) &)
+                                 . (const ((==6) . Set.size) &))
+                            -- don't worry about this :)
+                            . (. (&)) . on . on (&&) . (&) & flip),
+                        (3, Set.isSubsetOf . (Map.! 7)),
                         (6, const $ (==6) . Set.size),
-                        (5, \ m set -> set `Set.isSubsetOf` (m Map.! 6)),
+                        (5, flip Set.isSubsetOf . (Map.! 6)),
                         (2, const $ const True)]
               step (m, ss) (n, pred) =
                 let ([ns], rss) = partition (pred m) ss in
