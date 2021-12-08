@@ -2,11 +2,12 @@
 
 DIR="$(readlink -f $(dirname "$0"))"
 if [ -z "$1" ]
-then DAY="$(date +%d)"
+then DAYN="$(date +%d)"
 else
-    DAY="$1"
+    DAYN="$1"
     shift
 fi
+DAY="$(echo "$DAYN" | sed 's/^0*//')"
 DAYP="$(printf "%02d" "$DAY")"
 
 mkdir -p "$DIR/out"

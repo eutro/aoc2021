@@ -2,9 +2,10 @@
 
 DIR="$(readlink -f $(dirname "$0"))"
 if [ -z "$1" ]
-then DAY="$(date +%d)"
-else DAY="$1"
+then DAYN="$(date +%d)"
+else DAYN="$1"
 fi
+DAY="$(echo "$DAYN" | sed 's/^0*//')"
 DAYP="$(printf "%02d" "$DAY")"
 
 "$DIR/cmp.sh" "$DAY" || exit 1
