@@ -45,3 +45,6 @@ binarySearch f mn mx =
            LT -> binarySearch f mn (mid - 1)
            EQ -> mid
            GT -> binarySearch f (mid + 1) mx
+
+dbg :: Show a => a -> a
+dbg = show >>= trace
