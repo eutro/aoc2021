@@ -48,3 +48,9 @@ binarySearch f mn mx =
 
 dbg :: Show a => a -> a
 dbg = show >>= trace
+
+disjoin :: [a -> Bool] -> a -> Bool
+disjoin preds x = any ($ x) preds
+
+conjoin :: [a -> Bool] -> a -> Bool
+conjoin preds x = all ($ x) preds
