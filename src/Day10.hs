@@ -26,8 +26,8 @@ checkC s =
         check' [] stack = Right stack
         check' (c:s) stack = Left c
 
-score1 c = case c of ')' -> 3; ']' -> 57; '}' -> 1197; '>' -> 25137
-score2 c = case c of ')' -> 1; ']' -> 2; '}' -> 3; '>' -> 4
+score1 = (Map.!) $ Map.fromList [(')', 3), (']', 57), ('}', 1197), ('>', 25137)]
+score2 = (Map.!) $ Map.fromList [(')', 1), (']', 2), ('}', 3), ('>', 4)]
 
 main :: IO ()
 main = do
