@@ -12,30 +12,33 @@ import Data.Tuple
 import Debug.Trace
 import Util
 
-type Grid = Array (Int, Int) Int
+type Pos = (Int, Int)
+type Grid = Array Pos Int
 
-neighbours (x, y) = [(x-1, y), (x+1, y), (x, y-1), (x, y+1), (x-1, y-1), (x+1, y+1), (x+1, y-1), (x-1, y+1)]
+size :: Int
+size = 10
+
+gridBounds :: (Pos, Pos)
+gridBounds = ((1, 1), (size, size))
+
+neighbours = flip map (delete (0,0) $ range ((-1, -1), (1, 1))) . zipPos (+)
 
 tick :: Grid -> (Grid, Int)
 tick grid =
-  tick1 Set.empty grid $ Map.fromList $ map (flip (,) 1) $ indices grid
-  where tick1 :: (Set.Set (Int, Int)) -> Grid -> (Map.Map (Int, Int) Int) -> (Grid, Int)
+  tick1 Set.empty grid $ indices grid
+  where tick1 :: Set.Set Pos -> Grid -> [Pos] -> (Grid, Int)
         tick1 seen grid idcs =
-          let (grid', flashes') = flash idcs grid
-              flashes = filter (`Set.notMember` seen) flashes'
-          in if null flashes
-          then (grid' // (map (flip (,) 0) $ Set.toList seen), Set.size seen)
-          else tick1 (foldl (flip Set.insert) seen flashes) grid'
-               (Map.fromListWith (+) $ map (flip (,) 1) $ concatMap neighbours flashes)
-        flash :: (Map.Map (Int, Int) Int) -> Grid -> (Grid, [(Int, Int)])
-        flash idcs grid =
-          let (assocs, flashes) = unzip $ do
-                (idx, v) <- Map.toList idcs
+          let (assocs, flashes') = unzip $ do
+                (idx, v) <- Map.toList $ frequencies $ filter (`Set.notMember` seen) idcs
                 let newv = grid!idx + v
-                if inRange (bounds grid) idx
+                if inRange gridBounds idx
                   then return ((idx, newv), if newv > 9 then Just idx else Nothing)
                   else []
-          in (grid // assocs, catMaybes flashes)
+              grid' = grid // assocs
+              flashes = catMaybes flashes'
+          in if null flashes
+          then (grid' // (map (flip (,) 0) $ Set.toList seen), Set.size seen)
+          else tick1 (foldl (flip Set.insert) seen flashes) grid' $ concatMap neighbours flashes
 
 showGrid :: Grid -> String
 showGrid grid =
@@ -47,8 +50,7 @@ showGrid grid =
 main :: IO ()
 main = do
   input <- getContents
-  let grid' = map (map digitToInt) $ lines input :: [[Int]]
-  let grid = listArray ((0, 0), (length (head grid') - 1, length grid' - 1)) $ concat grid'
-  print $ sum $ map snd $ scanl (\ (grid, _) _ -> tick grid) (grid, 0) [1..100]
-  let allflash = length $ indices grid
-  print $ fst $ head $ filter ((==allflash) . snd . snd) $ iterate (\ (i, (grid, _)) -> (succ i, tick grid)) (0, (grid, 0))
+  let grid = listArray gridBounds $ concat $ map (map digitToInt) $ lines input
+  let (_:states) = iterate (\ (i, (grid, _)) -> (succ i, tick grid)) (0, (grid, 0))
+  print $ sum $ map (snd . snd) $ take 100 states
+  print $ fst $ head $ filter ((==(size*size)) . snd . snd) $ states

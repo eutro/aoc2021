@@ -1,5 +1,6 @@
 module Util where
 
+import qualified Data.Map as Map
 import Data.List
 import Debug.Trace
 
@@ -54,3 +55,9 @@ disjoin preds x = any ($ x) preds
 
 conjoin :: [a -> Bool] -> a -> Bool
 conjoin preds x = all ($ x) preds
+
+zipPos :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
+zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
+
+frequencies :: Ord a => [a] -> (Map.Map a Int)
+frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
