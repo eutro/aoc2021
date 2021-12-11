@@ -12,5 +12,5 @@ DAYP="$(printf "%02d" "$DAY")"
 
 mkdir -p "$DIR/out"
 cd "$DIR/src"
-ghc "$@"-o "$DIR/out/Day$DAYP" "$DIR/src/Day$DAYP.hs"
+ghc "$@" -o "$DIR/out/Day$DAYP" "$DIR/src/Day$DAYP.hs"
 exit $?

@@ -45,6 +45,12 @@ main :: IO ()
 main = do
   input <- getContents
   let grid = listArray gridBounds $ concat $ map (map digitToInt) $ lines input
-  let (_:counts) = map snd $ iterate (tick . fst) (grid, 0)
-  print $ sum $ take 10000 counts
-  print $ succ $ length $ takeWhile (/=100) $ counts
+      (_:counts) = map snd $ iterate (tick . fst) (grid, 0)
+      phase = succ $ length $ takeWhile (/=100) $ counts
+      prefixSums = listArray (0, phase) $ scanl (+) 0 counts
+      sumBetween 0 x
+        | x < phase = prefixSums!x
+        | otherwise = (prefixSums!phase) + ((x - phase) `div` 10) * 100
+      sumBetween a b = sumBetween 0 b - sumBetween 0 (pred a)
+  print $ sumBetween 0 100
+  print $ phase
