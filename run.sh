@@ -2,7 +2,7 @@
 
 DIR="$(readlink -f $(dirname "$0"))"
 
-if [ "$1" == "--time" ]
+if [ "$1" = "--time" ]
 then TIME="1"; shift
 fi
 
@@ -21,7 +21,7 @@ else
     if [ ! -f "$DIR/input/Day$DAYP.txt" ]
     then "$DIR/fetch.sh" "$DAY" || exit 1
     fi
-    if [ "$TIME" == 1 ]
+    if [ "$TIME" = 1 ]
     then time "$DIR/out/Day$DAYP" < "$DIR/input/Day$DAYP.txt"
     else exec "$DIR/out/Day$DAYP" < "$DIR/input/Day$DAYP.txt"
     fi

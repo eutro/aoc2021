@@ -12,19 +12,34 @@ import Data.Tuple
 import Debug.Trace
 import Util
 
--- appFold :: (String, Int) -> [(Int, Int)] -> [(Int, Int)]
-appFold points ("x", fx) = Set.toList $ Set.fromList $ [if x > fx then (2*fx - x, y) else (x, y) | (x, y) <- points]
-appFold points ("y", fy) = Set.toList $ Set.fromList $ [if y > fy then (x, 2*fy - y) else (x, y) | (x, y) <- points]
-
 main :: IO ()
 main = do
   input <- getContents
   let [points', insns'] = splitOn "\n\n" input
-      insns = map ((\ [a, b] -> (a, read b)) . splitOn "=" . drop (length "fold along ")) $ lines insns' :: [(String, Int)]
-      points = map ((read :: String -> (Int, Int)) . ("("++) . (++")")) $ lines points'
-  print $ length $ appFold points (head insns)
-  let fullFolded = Set.fromList $ foldl appFold points insns
-      (minx, miny) = minimum fullFolded
-      (maxx, maxy) = maximum fullFolded
-  putStrLn $ unlines [[if (x, y) `Set.member` fullFolded then '#' else '.' | x <- [minx..maxx]] | y <- [miny..maxy]]
+      insns = map (mapP axisPSide (read :: String -> Int)
+                   . listToP
+                   . splitOn "="
+                   . drop (length "fold along "))
+              $ lines insns'
+      points = Set.fromList
+               $ map ((read :: String -> (Int, Int)) . ("("++) . (++")"))
+               $ lines points'
+      (_:firstFolded:restFolded) = scanl appFold points insns
+  print $ Set.size firstFolded
+  putStrLn $ toGrid $ last restFolded
   return ()
+  where appFold :: Set.Set (Int, Int) -> (PairSide, Int) -> Set.Set (Int, Int)
+        appFold points (side, pos) =
+          let (toFold, noFold) = Set.partition ((>pos) . getP side) points
+              folded = Set.map (updateP (2*pos-) side) toFold
+          in Set.union noFold folded
+        toGrid :: Set.Set (Int, Int) -> String
+        toGrid points = let
+          (minx, miny) = minimum points
+          (maxx, maxy) = maximum points
+          in unlines
+             [[if (x, y) `Set.member` points
+               then '#'
+               else ' '
+              | x <- [minx..maxx]]
+             | y <- [miny..maxy]]
