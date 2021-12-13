@@ -83,6 +83,9 @@ mapP f g (x, y) = (f x, g y)
 listToP :: [a] -> (a, a)
 listToP [x, y] = (x, y)
 
+pToList :: (a, a) -> [a]
+pToList (x, y) = [x, y]
+
 toGrid :: Set.Set (Int, Int) -> String
 toGrid points = unlines
                 $ [[" #"!!(fromEnum $ (x, y) `Set.member` points)
