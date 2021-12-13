@@ -1,6 +1,7 @@
 module Util where
 
 import qualified Data.Map as Map
+import qualified Data.Set as Set
 import Data.List
 import Debug.Trace
 
@@ -81,3 +82,10 @@ mapP f g (x, y) = (f x, g y)
 
 listToP :: [a] -> (a, a)
 listToP [x, y] = (x, y)
+
+toGrid :: Set.Set (Int, Int) -> String
+toGrid points = unlines
+                $ [[" #"!!(fromEnum $ (x, y) `Set.member` points)
+                   | x <- [minx..maxx]] | y <- [miny..maxy]]
+  where (minx, miny) = minimum points
+        (maxx, maxy) = maximum points
