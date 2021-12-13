@@ -16,23 +16,22 @@ import Util
 main :: IO ()
 main = getContents
   >>= forM_ [True, False]
-  . ((print . ("start"&)) .)
-  . ((Set.empty&) . allPaths)
+  . ((print . ("start"&)) .) . (Set.empty&) . fix . ((>>=) id .)
+  . (. (flip (.)
+        . ((((((.) sum) .) .) . (. (flip zipWith . curry (range . swap) True)) . flip (.)) .)
+        . (. flip (isUpper . head >>= (Set.insert &) . (const id &) . if'))
+        . ((.) . (.) (((sum .) . map) .))))
+  . flip (.)
+  . (((.) . ((>>=) id .)
+      . (. ((.) . ((1&) . if') . (=="end") <*>))
+      . (.) . (. flip (.) (pToList . swap . mapP (filter (`notElem` ["start", "end"])) id))
+      . flip (.)) .)
+  . (. (partition . flip Set.member))
+  . flip (.)
+  . (Map.!)
   . Map.fromListWith (++)
   . map (mapP id (:[]))
   . (map swap >>= (++))
   . map (listToP . splitOn "-")
   . lines
-  where
-    allPaths :: Map.Map String [String] -> Set.Set String -> Bool -> String -> Int
-    allPaths edgeM = fix $ \ loop seen noRepeat from ->
-      if' ((=="end") from) 1
-      $ sum $ zipWith
-      ((sum .) . map . loop
-       ((isUpper . head >>= (Set.insert &) . (const id &) . if')
-        from seen))
-      [noRepeat..]
-      $ pToList
-      $ swap
-      $ mapP (filter (`notElem` ["start", "end"])) id
-      $ partition (`Set.member` seen) $ edgeM Map.! from
+
