@@ -6,23 +6,25 @@ if [ "$1" = "--time" ]
 then TIME="1"; shift
 fi
 
-if [ -z "$1" ]
-then DAYN="$(date +%d)"
-else DAYN="$1"
+re='^[0-9]+$'
+if ! [ -z "$1" ] && test "$(echo "$1" | grep -E '^[0-9]+$')"
+then DAYN="$1"; shift
+else DAYN="$(date +%d)"
 fi
 DAY="$(echo "$DAYN" | sed 's/^0*//')"
 DAYP="$(printf "%02d" "$DAY")"
 
-"$DIR/cmp.sh" "$DAY" || exit 1
+if [ "$1" = "--" ]
+then INPUT="/dev/stdin"; shift
+else if [ ! -f "$DIR/input/Day$DAYP.txt" ]
+     then "$DIR/fetch.sh" "$DAY" || exit 1
+     fi
+     INPUT="$DIR/input/Day$DAYP.txt"
+fi
 
-if [ "$2" = "--" ]
-then "$DIR/out/Day$DAYP" < /dev/stdin
-else
-    if [ ! -f "$DIR/input/Day$DAYP.txt" ]
-    then "$DIR/fetch.sh" "$DAY" || exit 1
-    fi
-    if [ "$TIME" = 1 ]
-    then time "$DIR/out/Day$DAYP" < "$DIR/input/Day$DAYP.txt"
-    else exec "$DIR/out/Day$DAYP" < "$DIR/input/Day$DAYP.txt"
-    fi
+"$DIR/cmp.sh" "$DAY" "$@" || exit 1
+
+if [ "$TIME" = 1 ]
+then time "$DIR/out/Day$DAYP" < "$INPUT"
+else exec "$DIR/out/Day$DAYP" < "$INPUT"
 fi
