@@ -13,32 +13,25 @@ import Data.Tuple
 import Debug.Trace
 import Util
 
+type Rules = Map.Map (Char, Char) Char
+type PairFreqs = Map.Map (Char, Char) Int
+
 main :: IO ()
 main = do
   input <- getContents
-  let (template : _ : rules') = lines input
-      rules = Map.fromList $ map ((\ [[a, b], [rhs]] -> ((a, b), rhs)) . splitOn " -> ") rules' :: Map.Map (Char, Char) Char
-      growth = iterate (appRules rules) $ parsePairFreqs template
-      solveN n =
-        let fAtN = Map.toList $ pairFreqsToCharC (growth!!n) template
-            (minEl, minElc) = minimumBy (compare `on` snd) fAtN
-            (maxEl, maxElc) = maximumBy (compare `on` snd) fAtN
-        in print (maxElc - minElc)
-  solveN 10
-  solveN 40
-  return ()
-  where parsePairFreqs :: String -> Map.Map (Char, Char) Int
-        parsePairFreqs s = frequencies $ zip s (tail s)
-        appRules :: Map.Map (Char, Char) Char
-                 -> Map.Map (Char, Char) Int
-                 -> Map.Map (Char, Char) Int
-        appRules rules s =
-          Map.fromListWith (+) $ concat [[(sub, freq) | sub <- decomposition rules rule] | (rule, freq) <- Map.toList s]
-
-        pairFreqsToCharC :: Map.Map (Char, Char) Int -> String -> Map.Map Char Int
-        pairFreqsToCharC pairs s = Map.fromListWith (+) $ (last s, 1) : [(l, freq) | ((l, _), freq) <- Map.toList pairs]
-
-        decomposition :: Map.Map (Char, Char) Char -> (Char, Char) -> [(Char, Char)]
-        decomposition rules rule@(a, b) =
-          let c = rules Map.! rule
-          in [(a, c), (c, b)]
+  let (template : "" : rules') = lines input
+      rules = Map.fromList $ map (mapP listToP head . listToP . splitOn " -> ") rules' :: Rules
+      growth = map (Map.elems . countChars template) $ iterate (appRules rules) $ countPairs template
+      solveN n = print (on (-) (growth!!n&) maximum minimum)
+  mapM_ solveN [10, 40]
+  where appRules :: Rules -> PairFreqs -> PairFreqs
+        appRules rules s = Map.fromListWith (+) $
+          do (rule, freq) <- Map.toList s
+             sub <- decomp rules rule
+             return (sub, freq)
+        countChars :: String -> PairFreqs -> Map.Map Char Int
+        countChars s pairs = Map.fromListWith (+) $ (last s, 1) : (map (mapP fst id) $ Map.toList pairs)
+        countPairs :: String -> PairFreqs
+        countPairs s = frequencies $ zip s (tail s)
+        decomp :: Rules -> (Char, Char) -> [(Char, Char)]
+        decomp rules rule@(a, c) = [(a, b), (b, c)] where b = rules Map.! rule
