@@ -22,16 +22,16 @@ main = do
   let (template : "" : rules') = lines input
       rules = Map.fromList $ map (mapP listToP head . listToP . splitOn " -> ") rules' :: Rules
       growth = map (Map.elems . countChars template) $ iterate (appRules rules) $ countPairs template
-      solveN n = print (on (-) (growth!!n&) maximum minimum)
+      solveN n = print $ uncurry subtract $ minMax $ growth !! n
   mapM_ solveN [10, 40]
   where appRules :: Rules -> PairFreqs -> PairFreqs
-        appRules rules s = Map.fromListWith (+) $
-          do (rule, freq) <- Map.toList s
+        appRules rules freqs = Map.fromListWith (+) $
+          do (rule, freq) <- Map.toList freqs
              sub <- decomp rules rule
              return (sub, freq)
         countChars :: String -> PairFreqs -> Map.Map Char Int
-        countChars s pairs = Map.fromListWith (+) $ (last s, 1) : (map (mapP fst id) $ Map.toList pairs)
+        countChars (c:_) pairs = Map.fromListWith (+) $ (c, 1) : (map (mapP snd id) $ Map.toList pairs)
         countPairs :: String -> PairFreqs
-        countPairs s = frequencies $ zip s (tail s)
+        countPairs s@(_:r) = frequencies $ zip s r
         decomp :: Rules -> (Char, Char) -> [(Char, Char)]
         decomp rules rule@(a, c) = [(a, b), (b, c)] where b = rules Map.! rule

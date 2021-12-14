@@ -92,3 +92,6 @@ toGrid points = unlines
                    | x <- [minx..maxx]] | y <- [miny..maxy]]
   where (minx, miny) = minimum points
         (maxx, maxy) = maximum points
+
+minMax :: (Foldable t, Ord a) => t a -> (a, a)
+minMax l = (minimum l, maximum l)
