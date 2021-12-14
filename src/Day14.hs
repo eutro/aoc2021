@@ -25,13 +25,12 @@ main = do
       solveN n = print $ uncurry subtract $ minMax $ growth !! n
   mapM_ solveN [10, 40]
   where appRules :: Rules -> PairFreqs -> PairFreqs
-        appRules rules freqs = Map.fromListWith (+) $
-          do (rule, freq) <- Map.toList freqs
-             sub <- decomp rules rule
-             return (sub, freq)
+        appRules =
+          ((Map.fromListWith (+) . concatMap (uncurry (map . flip (,)) . swap)) .)
+          . (. Map.toList) . map . (`mapP` id) . decomp
         countChars :: String -> PairFreqs -> Map.Map Char Int
-        countChars (c:_) pairs = Map.fromListWith (+) $ (c, 1) : (map (mapP snd id) $ Map.toList pairs)
+        countChars = (Map.fromListWith (+) .) . (. (map (mapP snd id) . Map.toList)) . (:) . flip (,) 1 . head
         countPairs :: String -> PairFreqs
-        countPairs s@(_:r) = frequencies $ zip s r
+        countPairs = frequencies . (tail >>= flip zip)
         decomp :: Rules -> (Char, Char) -> [(Char, Char)]
-        decomp rules rule@(a, c) = [(a, b), (b, c)] where b = rules Map.! rule
+        decomp = (.) (tail >>= flip zip) . (<*> pToList) . (.) intersperse . (Map.!)
