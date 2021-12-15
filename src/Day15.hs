@@ -22,40 +22,28 @@ main :: IO ()
 main = do
   input <- getContents
   let ls = map (map digitToInt) $ lines input
-      gr@(topLeft, bottomRight) = ((1, 1), (length $ head ls, length ls))
-      (maxx, maxy) = bottomRight
-      bottomRight' = (mapP (*5) (*5) bottomRight)
-      nb = (topLeft, bottomRight')
+      gridSize = (length $ head ls, length ls)
+      gr@(topLeft, bottomRight) = ((0, 0), mapP pred pred gridSize)
+      gridSize' = (mapP (*5) (*5) gridSize)
+      nb@(_, bottomRight') = (topLeft, mapP pred pred gridSize')
       grid = listArray gr $ concat ls :: Grid
-
-  print $ dijkstras (\ pos -> if inRange (bounds grid) pos then Just (grid!pos) else Nothing)
-    bottomRight Set.empty $ Set.fromList [(0, topLeft)]
-
-  print $ dijkstras
-    (\ pos@(x, y) ->
-       if inRange nb pos
-       then Just $ let
-         tilex = (x - 1) `div` maxx
-         tiley = (y - 1) `div` maxy
-         diff = tilex + tiley
-         nx = (x - 1) `mod` maxx + 1
-         ny = (y - 1) `mod` maxy + 1
-         v = grid!(nx, ny)
-       in (v + diff - 1) `mod` 9 + 1
-       else Nothing)
-    bottomRight' Set.empty $ Set.fromList [(0, topLeft)]
-
-  return ()
-  where dijkstras :: (Pos -> Maybe Int) -> Pos -> Set.Set Pos -> Set.Set (Int, Pos) -> Int
-        dijkstras grid end seen queue =
-          let (next', rest) = Set.splitAt 1 queue
-              [(nextRisk, nextPos)] = Set.toList next'
-          in if nextPos == end then nextRisk
-          else if nextPos `Set.member` seen then dijkstras grid end seen rest
-          else let seen' = nextPos `Set.insert` seen
-                   queue' = Set.union queue
-                           $ Set.fromList
-                           $ map (\ p -> (nextRisk + (fromJust $ grid p), p))
-                           $ filter (\ p -> p `Set.notMember` seen && isJust (grid p))
-                           $ neighbours nextPos
-               in dijkstras grid end seen' queue'
+      getPos pos = succ
+                   $ (`mod` 9)
+                   $ pred
+                   $ grid!(zipPos mod pos gridSize) +
+                   (uncurry (+) $ zipPos div pos gridSize)
+  mapM_ (print . uncurry dijkstras) [(gr, (grid!)), (nb, getPos)]
+  where dijkstras :: (Pos, Pos) -> (Pos -> Int) -> Int
+        dijkstras bounds@(start, end) grid = loop Set.empty $ Set.fromList [(0, start)]
+          where loop seen queue =
+                  let (next', rest) = Set.splitAt 1 queue
+                      [(nextRisk, nextPos)] = Set.toList next'
+                  in if nextPos == end then nextRisk
+                  else if nextPos `Set.member` seen then loop seen rest
+                  else let seen' = nextPos `Set.insert` seen
+                           queue' = Set.union queue
+                             $ Set.fromList
+                             $ map (\ p -> (nextRisk + grid p, p))
+                             $ filter (\ p -> p `Set.notMember` seen && inRange bounds p)
+                             $ neighbours nextPos
+                  in loop seen' queue'
