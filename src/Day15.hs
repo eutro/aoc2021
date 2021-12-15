@@ -27,7 +27,9 @@ main = do
       getPos = succ . (`mod` 9) . pred .
                ((+) . (grid!) . zipPos (flip mod) gridSize
                 <*> uncurry (+) . zipPos (flip div) gridSize)
-  forM_ [1, 5] (print . dijkstras getPos . (,) (0, 0) . (gridSize&) . (id >>= mapP) . (pred .) . (*))
+  forM_ [1, 5]
+    $ print . dijkstras getPos . (,) (0, 0)
+    . (gridSize&) . (id >>= mapP) . (pred .) . (*)
   where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
         dijkstras grid bounds@(start, end) =
           fromLeft 0 $ iterateM step (Set.empty, Set.fromList [(0, start)])
