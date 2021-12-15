@@ -60,7 +60,7 @@ conjoin preds x = all ($ x) preds
 zipPos :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
 zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
 
-frequencies :: Ord a => [a] -> (Map.Map a Int)
+frequencies :: (Ord a, Num n) => [a] -> (Map.Map a n)
 frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 
 data PairSide = PairLeft | PairRight
