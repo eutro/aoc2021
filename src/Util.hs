@@ -95,3 +95,6 @@ toGrid points = unlines
 
 minMax :: (Foldable t, Ord a) => t a -> (a, a)
 minMax l = (minimum l, maximum l)
+
+iterateM :: Monad m => (a -> m a) -> a -> m a
+iterateM f = g where g x = f x >>= g

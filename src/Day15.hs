@@ -22,28 +22,24 @@ main :: IO ()
 main = do
   input <- getContents
   let ls = map (map digitToInt) $ lines input
-      gridSize = (length $ head ls, length ls)
-      gr@(topLeft, bottomRight) = ((0, 0), mapP pred pred gridSize)
-      gridSize' = (mapP (*5) (*5) gridSize)
-      nb@(_, bottomRight') = (topLeft, mapP pred pred gridSize')
-      grid = listArray gr $ concat ls :: Grid
-      getPos pos = succ
-                   $ (`mod` 9)
-                   $ pred
-                   $ grid!(zipPos mod pos gridSize) +
-                   (uncurry (+) $ zipPos div pos gridSize)
-  mapM_ (print . uncurry dijkstras) [(gr, (grid!)), (nb, getPos)]
-  where dijkstras :: (Pos, Pos) -> (Pos -> Int) -> Int
-        dijkstras bounds@(start, end) grid = loop Set.empty $ Set.fromList [(0, start)]
-          where loop seen queue =
-                  let (next', rest) = Set.splitAt 1 queue
-                      [(nextRisk, nextPos)] = Set.toList next'
-                  in if nextPos == end then nextRisk
-                  else if nextPos `Set.member` seen then loop seen rest
-                  else let seen' = nextPos `Set.insert` seen
-                           queue' = Set.union queue
-                             $ Set.fromList
-                             $ map (\ p -> (nextRisk + grid p, p))
-                             $ filter (\ p -> p `Set.notMember` seen && inRange bounds p)
-                             $ neighbours nextPos
-                  in loop seen' queue'
+      gridSize@(w, h) = (length $ head ls, length ls)
+      grid = listArray ((0, 0), (w-1, h-1)) $ concat ls :: Grid
+      getPos = succ . (`mod` 9) . pred .
+               ((+) . (grid!) . zipPos (flip mod) gridSize
+                <*> uncurry (+) . zipPos (flip div) gridSize)
+  forM_ [1, 5] (print . dijkstras getPos . (,) (0, 0) . (gridSize&) . (id >>= mapP) . (pred .) . (*))
+  where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
+        dijkstras grid bounds@(start, end) =
+          fromLeft 0 $ iterateM step (Set.empty, Set.fromList [(0, start)])
+          where step (seen, queue)
+                  | nextPos == end = Left nextRisk
+                  | nextPos `Set.member` seen = Right (seen, rest)
+                  | otherwise = Right (nextPos `Set.insert` seen,
+                                       Set.union queue
+                                       $ Set.fromList
+                                       [(nextRisk + grid p, p)
+                                       | p <- neighbours nextPos,
+                                         p `Set.notMember` seen,
+                                         inRange bounds p])
+                  where ((nextRisk, nextPos), rest) = Set.deleteFindMin queue
+
