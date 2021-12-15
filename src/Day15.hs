@@ -24,12 +24,11 @@ main = do
   let ls = map (map digitToInt) $ lines input
       gridSize@(w, h) = (length $ head ls, length ls)
       grid = listArray ((0, 0), (w-1, h-1)) $ concat ls :: Grid
-      getPos = succ . (`mod` 9) . pred .
-               ((+) . (grid!) . zipPos (flip mod) gridSize
-                <*> uncurry (+) . zipPos (flip div) gridSize)
-  forM_ [1, 5]
-    $ print . dijkstras getPos . (,) (0, 0)
-    . (gridSize&) . (id >>= mapP) . (pred .) . (*)
+      getPos pos = succ $ (`mod` 9) $ pred $
+                   (grid ! zipPos mod pos gridSize) +
+                   (uncurry (+) $ zipPos div pos gridSize)
+      solve sf = print $ dijkstras getPos ((0, 0), join mapP (pred . (sf*)) gridSize)
+  forM_ [1, 5] solve
   where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
         dijkstras grid bounds@(start, end) =
           fromLeft 0 $ iterateM step (Set.empty, Set.fromList [(0, start)])
