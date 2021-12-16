@@ -78,7 +78,7 @@ main = do
         readOpPackets = do
           tag <- headM
           case tag of
-            0 -> readBinDigits <$> takeM 15 >>= fmap (evalState readAllPackets) . takeM
+            0 -> readBinDigits <$> takeM 15 >>= takeM >>= return . evalState readAllPackets
             1 -> readBinDigits <$> takeM 11 >>= (`replicateM` readPacket)
 
         readAllPackets :: RState [Packet]
