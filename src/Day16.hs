@@ -78,16 +78,12 @@ main = do
         readOpPackets = do
           tag <- headM
           case tag of
-            0 -> readBinDigits <$> takeM 15 >>= fmap readAllPackets . takeM
-            1 -> readBinDigits <$> takeM 11 >>= readNPackets
+            0 -> readBinDigits <$> takeM 15 >>= fmap (evalState readAllPackets) . takeM
+            1 -> readBinDigits <$> takeM 11 >>= (`replicateM` readPacket)
 
-        readAllPackets :: [Int] -> [Packet]
-        readAllPackets [] = []
-        readAllPackets ls = p : readAllPackets rest
-          where (p, rest) = runState readPacket ls
-
-        readNPackets :: Int -> RState [Packet]
-        readNPackets 0 = return []
-        readNPackets n = do
-          packet <- readPacket
-          (packet:) <$> readNPackets (pred n)
+        readAllPackets :: RState [Packet]
+        readAllPackets = do
+          end <- null <$> get
+          if end
+            then return []
+            else (:) <$> readPacket <*> readAllPackets
