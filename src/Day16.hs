@@ -26,17 +26,22 @@ main = do
       packet = evalState readPacket bits
   print $ verSum packet
   print $ evalPacket packet
-  where hexDigitToBits = (Map.!)
+  where hexDigitToBits :: Char -> [Int]
+        hexDigitToBits = (Map.!)
                          (Map.fromList
                           [('0', [0,0,0,0]), ('1', [0,0,0,1]), ('2', [0,0,1,0]), ('3', [0,0,1,1]),
                            ('4', [0,1,0,0]), ('5', [0,1,0,1]), ('6', [0,1,1,0]), ('7', [0,1,1,1]),
                            ('8', [1,0,0,0]), ('9', [1,0,0,1]), ('A', [1,0,1,0]), ('B', [1,0,1,1]),
                            ('C', [1,1,0,0]), ('D', [1,1,0,1]), ('E', [1,1,1,0]), ('F', [1,1,1,1])])
 
+        verSum :: Packet -> Int
         verSum (Packet ver (Literal _)) = ver
         verSum (Packet ver (Operator _ subs)) = ver + sum (map verSum subs)
 
+        binOp :: Enum a => (Int -> Int -> a) -> [Int] -> Int
         binOp op [a, b] = fromEnum $ a `op` b
+
+        lookupOp :: Int -> [Int] -> Int
         lookupOp = (Map.!)
                    (Map.fromList
                     [(0, sum),
@@ -47,6 +52,7 @@ main = do
                      (6, binOp (<)),
                      (7, binOp (==))])
 
+        evalPacket :: Packet -> Int
         evalPacket (Packet _ (Literal n)) = n
         evalPacket (Packet _ (Operator op subs)) = lookupOp op $ map evalPacket subs
 
@@ -56,11 +62,9 @@ main = do
         headM = state (fromJust . uncons)
 
         readPacket :: RState Packet
-        readPacket = do
-          ver <- readBinDigits <$> takeM 3
-          tag <- readBinDigits <$> takeM 3
-          payload <- readPayload tag
-          return $ Packet ver payload
+        readPacket = Packet
+                     <$> (readBinDigits <$> takeM 3)
+                     <*> (readBinDigits <$> takeM 3 >>= readPayload)
 
         readPayload :: Int -> RState Payload
         readPayload 4 = Literal <$> readIntLEBn't
