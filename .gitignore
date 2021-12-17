@@ -4,3 +4,5 @@
 out
 session.key
 test*.txt
+*.aux
+*.log

@@ -36,6 +36,6 @@ main = do
                   | dx == 0 && x < minx = False
                   | otherwise = loop (step s)
 
-        step :: SState ->  SState
+        step :: SState -> SState
         step ((x, y), (dx, dy)) =
           ((x + dx, y + dy), (dx - sign dx, dy - 1))

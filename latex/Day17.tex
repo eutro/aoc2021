@@ -1,0 +1,50 @@
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+Let \(m_x, m_y\) be the minimum and \(M_x, M_y\) be the maximum x and y values of the target area respectively.
+It is assumed than \(m_x, M_x > 0\) and \(m_y, M_y < 0\).
+
+With initial y velocity \(j\), after \(n\) steps, the y position of the probe, \(y\), is given by
+\begin{align*}
+  y &= \sum_{r=0}^{n-1}(j - r) \\
+  &= nj - \sum_{r=0}^{n-1}{r} \\
+  &= nj - \frac{n(n-1)}{2} \\
+  &= \frac{-n^2 + n(2j + 1)}{2} \\
+\end{align*}
+
+The time at which this intersects the target area is given by
+\begin{align*}
+  & m_y \le y \le M_y \\
+  \iff & m_y \le \frac{-n^2 + n(2j + 1)}{2} \le M_y \\
+  \iff & 2m_y \le -n^2 + n(2j + 1) \le 2M_y \\
+  \iff & 2m_y \le -(n - \frac{2j + 1}{2})^2 + (\frac{2j + 1}{2})^2 \le 2M_y \\
+  \iff & 2m_y - (\frac{2j + 1}{2})^2 \le -(n - \frac{2j + 1}{2})^2 \le 2M_y - (\frac{2j + 1}{2})^2 \\
+  \iff & (\frac{2j + 1}{2})^2 - 2m_y \ge (n - \frac{2j + 1}{2})^2 \ge (\frac{2j + 1}{2})^2 - 2M_y \\
+  \iff & \sqrt{(\frac{2j + 1}{2})^2 - 2m_y} \ge n - \frac{2j + 1}{2} \ge \sqrt{(\frac{2j + 1}{2})^2 - 2M_y} \\
+  \iff & \frac{2j + 1}{2} + \sqrt{(\frac{2j + 1}{2})^2 - 2m_y} \ge n \ge \frac{2j + 1}{2} + \sqrt{(\frac{2j + 1}{2})^2 - 2M_y}
+\end{align*}
+
+With initial x velocity \(i \ge 0\), the x position after \(n\) steps, \(x\), is given by
+\begin{align*}
+  x &=
+  \begin{cases}
+    \sum_{r=0}^{n-1}(i - r) & n \le i \\
+    \sum_{r=0}^{i-1}(i - r) & n > i
+  \end{cases} \\
+  &=
+  \begin{cases}
+    \sum_{r=1}^{i}r - \sum_{r=1}^{n-1}{r} & n \le i \\
+    \sum_{r=1}^{i}r & n > i
+  \end{cases} \\
+  &=
+  \begin{cases}
+    \frac{i^2 + i}{2} - \frac{n^2 - n}{2} & n \le i \\
+    \frac{i^2 + i}{2} & n > i
+  \end{cases} \\
+  &=
+  \begin{cases}
+    \frac{(i+n)(i-n+1)}{2} & n \le i \\
+    \frac{i^2 + i}{2} & n > i
+  \end{cases}
+\end{align*}
+\end{document}
