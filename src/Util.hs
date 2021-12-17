@@ -98,3 +98,12 @@ minMax l = (minimum l, maximum l)
 
 iterateM :: Monad m => (a -> m a) -> a -> m a
 iterateM f = g where g x = f x >>= g
+
+sign :: Int -> Int
+sign 0 = 0
+sign x
+  | x < 0 = -1
+  | x > 0 = 1
+
+triangle :: Integral a => a -> a
+triangle n = div (n * (n + 1)) 2
