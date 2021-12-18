@@ -63,7 +63,7 @@ zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
 frequencies :: (Ord a, Num n) => [a] -> (Map.Map a n)
 frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 
-data PairSide = PairLeft | PairRight
+data PairSide = PairLeft | PairRight deriving Show
 
 axisPSide :: String -> PairSide
 axisPSide "x" = PairLeft
