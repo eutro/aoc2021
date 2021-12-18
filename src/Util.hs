@@ -1,9 +1,13 @@
-module Util where
+module Util
+  (module Util,
+   module Pairs)
+where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List
 import Debug.Trace
+import Pairs
 
 splitS :: (String -> Bool) -> String -> [String]
 splitS pred s = case dropWhile pred (init $ tails s) of
@@ -57,38 +61,8 @@ disjoin preds x = any ($ x) preds
 conjoin :: [a -> Bool] -> a -> Bool
 conjoin preds x = all ($ x) preds
 
-zipPos :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
-zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
-
 frequencies :: (Ord a, Num n) => [a] -> (Map.Map a n)
 frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
-
-data PairSide = PairLeft | PairRight deriving Show
-
-otherSide :: PairSide -> PairSide
-otherSide PairLeft = PairRight
-otherSide PairRight = PairLeft
-
-axisPSide :: String -> PairSide
-axisPSide "x" = PairLeft
-axisPSide "y" = PairRight
-
-getP :: PairSide -> (a, a) -> a
-getP PairLeft (l, _) = l
-getP PairRight (_, r) = r
-
-updateP :: (a -> a) -> PairSide -> (a, a) -> (a, a)
-updateP f PairLeft (l, r) = (f l, r)
-updateP f PairRight (l, r) = (l, f r)
-
-mapP :: (a -> c) -> (b -> d) -> (a, b) -> (c, d)
-mapP f g (x, y) = (f x, g y)
-
-listToP :: [a] -> (a, a)
-listToP [x, y] = (x, y)
-
-pToList :: (a, a) -> [a]
-pToList (x, y) = [x, y]
 
 toGrid :: Set.Set (Int, Int) -> String
 toGrid points = unlines

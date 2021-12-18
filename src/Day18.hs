@@ -4,6 +4,7 @@ import Control.Applicative
 import Data.Maybe
 import Data.Function
 import Util
+import Pairs
 
 data Tree a = Pair (Tree a, Tree a) | Single a
 type SnF = Tree Int
