@@ -30,9 +30,9 @@ main = do
       solve sf = print $ dijkstras getRisk ((0, 0), join mapP (pred . (sf*)) gridSize)
   forM_ [1, 5] solve
   where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
-        dijkstras getRisk bounds@(start, end) =
-          fromLeft 0 $ iterateM step (Set.empty, Set.fromList [(0, start)])
-          where step (seen, queue)
+        dijkstras getRisk bounds@(start, end) = ret
+          where Left ret = iterateM step (Set.empty, Set.fromList [(0, start)])
+                step (seen, queue)
                   | nextPos == end = Left nextRisk
                   | nextPos `Set.member` seen = Right (seen, rest)
                   | otherwise = Right (nextPos `Set.insert` seen,
