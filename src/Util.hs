@@ -85,3 +85,6 @@ sign x
 
 triangle :: Integral a => a -> a
 triangle n = div (n * (n + 1)) 2
+
+median :: Ord a => [a] -> a
+median l = sort l !! div (length l) 2
