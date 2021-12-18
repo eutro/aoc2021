@@ -65,6 +65,10 @@ frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 
 data PairSide = PairLeft | PairRight deriving Show
 
+otherSide :: PairSide -> PairSide
+otherSide PairLeft = PairRight
+otherSide PairRight = PairLeft
+
 axisPSide :: String -> PairSide
 axisPSide "x" = PairLeft
 axisPSide "y" = PairRight
