@@ -2,6 +2,7 @@ import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Text.ParserCombinators.ReadP as RP
 import Control.Monad
+import Control.Applicative
 import Control.Monad.State
 import Data.Array
 import Data.List
@@ -34,46 +35,49 @@ getSnF :: [PairSide] -> SnF -> SnF
 getSnF [] x = x
 getSnF (s:path) (Pair p) = getSnF path $ getP s p
 
-findLeftMost (Single _) = []
-findLeftMost (Pair (l, _)) = PairLeft : findLeftMost l
-
-findRightMost (Single _) = []
-findRightMost (Pair (_, r)) = PairRight : findRightMost r
-
-isSingle (Single _) = True
-isSingle _ = False
-
-getSingle (Single x) = x
-
-mapSingle f (Single x) = Single (f x)
-
-findExplode path left right (Single _) = Nothing
-findExplode path left right (Pair (l, r)) =
-  if length path >= 4 && isSingle l && isSingle r
-  then Just (reverse <$> left, reverse path, reverse <$> right)
-  else let lf = findExplode (PairLeft:path) left (Just $ findLeftMost r ++ PairRight:path) l
-           rf = findExplode (PairRight:path) (Just $ findRightMost l ++ PairLeft:path) right r
-       in if isJust lf then lf else rf
-
-findSplit path (Single x) = if x >= 10 then Just $ reverse path else Nothing
-findSplit path (Pair (l, r)) =
-  let lf = findSplit (PairLeft:path) l
-      rf = findSplit (PairRight:path) r
-  in if isJust lf then lf else rf
-
 normalise :: SnF -> SnF
 normalise snf =
-  case findExplode [] Nothing Nothing snf of
-    Just (left, path, right) -> normalise $
-      let Pair (Single lv, Single rv) = getSnF path snf
-      in fromMaybe id (updateSnF (mapSingle (lv+)) <$> left)
-         $ fromMaybe id (updateSnF (mapSingle (rv+)) <$> right)
-         $ updateSnF (const $ Single 0) path snf
-    Nothing -> case findSplit [] snf of
-      Just path -> normalise $ updateSnF
-                   (\ (Single n) -> Pair (Single $ n `div` 2, Single $ (n `div` 2) + (n `mod` 2)))
-                   path snf
-      Nothing -> snf
+  fromMaybe snf
+  $ appExplode <$> findExplode [] Nothing Nothing snf
+  <|> appSplit <$> findSplit [] snf
+  where appExplode (left, path, right) = normalise $
+          let Pair (Single lv, Single rv) = getSnF path snf
+          in fromMaybe id (updateSnF (mapSingle (lv+)) <$> left)
+             $ fromMaybe id (updateSnF (mapSingle (rv+)) <$> right)
+             $ updateSnF (const $ Single 0) path snf
+
+        mapSingle f (Single x) = Single (f x)
+
+        appSplit path = normalise $ updateSnF createSplit path snf
+
+        createSplit (Single n) =
+          (curry Pair `on` Single)
+          (n `div` 2)
+          ((n `div` 2) + (n `mod` 2))
+
+        isSingle (Single _) = True
+        isSingle _ = False
+
+        findLeftMost (Single _) = []
+        findLeftMost (Pair (l, _)) = PairLeft : findLeftMost l
+
+        findRightMost (Single _) = []
+        findRightMost (Pair (_, r)) = PairRight : findRightMost r
+
+        findExplode path left right (Single _) = Nothing
+        findExplode path left right (Pair (l, r))
+          | length path >= 4 && isSingle l && isSingle r =
+            Just (reverse <$> left, reverse path, reverse <$> right)
+          | otherwise =
+            findExplode (PairLeft:path) left (Just $ findLeftMost r ++ PairRight:path) l
+            <|> findExplode (PairRight:path) (Just $ findRightMost l ++ PairLeft:path) right r
+
+        findSplit path (Single x)
+          | x >= 10 = Just $ reverse path
+          | otherwise = Nothing
+        findSplit path (Pair (l, r)) =
+          findSplit (PairLeft:path) l
+          <|> findSplit (PairRight:path) r
 
 addSnF :: SnF -> SnF -> SnF
 addSnF = curry $ normalise . Pair
