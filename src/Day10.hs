@@ -1,6 +1,8 @@
 import qualified Data.Set as Set
 import qualified Data.Map as Map
 import qualified Text.ParserCombinators.ReadP as RP
+import Control.Applicative
+import Control.Monad
 import Data.Array
 import Data.List
 import Data.Maybe
@@ -12,19 +14,17 @@ import Data.Tuple
 import Debug.Trace
 import Util
 
+open2close :: Map.Map Char Char
+open2close = Map.fromList [('(', ')'), ('[', ']'), ('{', '}'), ('<', '>')]
+
 checkC :: String -> Either Char String
-checkC s =
-  check' s []
-  where check' (')':s) (')':stack) = check' s stack
-        check' (']':s) (']':stack) = check' s stack
-        check' ('}':s) ('}':stack) = check' s stack
-        check' ('>':s) ('>':stack) = check' s stack
-        check' ('(':s) stack = check' s (')':stack)
-        check' ('[':s) stack = check' s (']':stack)
-        check' ('{':s) stack = check' s ('}':stack)
-        check' ('<':s) stack = check' s ('>':stack)
-        check' [] stack = Right stack
-        check' (c:s) stack = Left c
+checkC s = foldM step [] s
+  where step stack c =
+          Right . (:stack) <$> Map.lookup c open2close
+          <|> do (match, porridge) <- uncons stack
+                 guard (c == match)
+                 Just $ Right porridge
+          & fromMaybe (Left c) 
 
 score1 = (Map.!) $ Map.fromList [(')', 3), (']', 57), ('}', 1197), ('>', 25137)]
 score2 = (Map.!) $ Map.fromList [(')', 1), (']', 2), ('}', 3), ('>', 4)]
