@@ -1,5 +1,7 @@
 # AOC 2021
 
+[![Run All](https://github.com/eutro/aoc2021/actions/workflows/run.yml/badge.svg)](https://github.com/eutro/aoc2021/actions/workflows/run.yml)
+
 These are my solutions to [Advent of Code](https://adventofcode.com)
 2021, written in Haskell.
 
