@@ -17,9 +17,10 @@ import Util
 
 type Pos = (Int, Int, Int)
 type Scan = Set.Set Pos
-type ScanWithDists = (Scan, Map.Map Pos Int)
+type Dists = Map.Map Int Int
+type ScanWithDists = (Scan, Dists)
 type CompleteProbe = (Pos, ScanWithDists)
-type ProcessedScan = [ScanWithDists]
+type ProcessedScan = ([Scan], Dists)
 
 allUps (x,y,z) =
   [(x,y,z),
@@ -63,28 +64,30 @@ main = do
 
         computeDists :: Scan -> ScanWithDists
         computeDists scan = (scan, freqs)
-          -- these are maps instead of sets out of principle;
-          -- but in practice no distance appears more than once
           where points = Set.toList scan
-                freqs = Map.delete (0,0,0) $ frequencies $ (.-) <$> points <*> points
+                freqs = Map.map (`div` 2)
+                        $ Map.delete 0
+                        $ frequencies
+                        $ manhattan <$> points <*> points
 
         processScan :: [Pos] -> ProcessedScan
-        processScan raw = map (computeDists . Set.fromList) $ transpose $ map allOrientations raw
+        processScan raw = (sets, snd $ computeDists unrotated)
+          where sets@(unrotated:_) = map Set.fromList $ transpose $ map allOrientations raw
 
         placeNextBatch :: [(Pos, ScanWithDists)] -> State [ProcessedScan] [(Pos, ScanWithDists)]
         placeNextBatch batch = concat <$> traverse placeProbesAgainst (map snd batch)
 
         placeProbesAgainst :: ScanWithDists -> State [ProcessedScan] [(Pos, ScanWithDists)]
         placeProbesAgainst probe = state
-          $ partitionEithers . map
-          (fromMaybe . Right <*> fmap Left . listToMaybe . mapMaybe (tryMatch probe))
+          $ partitionEithers . map (fromMaybe . Right <*> fmap Left . tryMatch probe)
 
-        tryMatch :: ScanWithDists -> ScanWithDists -> Maybe (Pos, ScanWithDists)
-        tryMatch (probeA, distsA) (probeB, distsB) = listToMaybe $ do
+        tryMatch :: ScanWithDists -> ProcessedScan -> Maybe (Pos, ScanWithDists)
+        tryMatch (probeA, distsA) (probeBs, distsB) = listToMaybe $ do
           let commonDists = Map.intersectionWith min distsA distsB
           -- the scans can only match if they share enough distances;
-          -- the converse is not guaranteed, although it is true in practice
+          -- the converse is not guaranteed, although it is actually true in practice
           guard (sum commonDists >= 66) -- 12 choose 2
+          probeB <- probeBs
           a <- Set.toList probeA
           b <- Set.toList probeB
           let mapped = Set.mapMonotonic ((.+a) . (.-b)) probeB
