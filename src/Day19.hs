@@ -16,6 +16,10 @@ import Debug.Trace
 import Util
 
 type Pos = (Int, Int, Int)
+type Scan = Set.Set Pos
+type ScanWithDists = (Scan, Map.Map Pos Int)
+type CompleteProbe = (Pos, ScanWithDists)
+type ProcessedScan = [ScanWithDists]
 
 allUps (x,y,z) =
   [(x,y,z),
@@ -40,40 +44,50 @@ manhattan a b = abs x + abs y + abs z
 
 main :: IO ()
 main = do
-  scans <- map (map ((read :: String -> Pos) . ("("++) . (++")"))
-                . tail
-                . lines)
+  scans <- map (map ((read :: String -> Pos) . ("("++) . (++")")) . tail . lines)
            . splitOn "\n\n"
            <$> getContents
   let (probes, beacons) = resolveProbes scans
   print $ Set.size beacons
   print $ maximum $ manhattan <$> probes <*> probes
-  where resolveProbes :: [[Pos]] -> ([Pos], Set.Set Pos)
-        resolveProbes scans = mapRight Set.unions $ unzip $ concat finds
-          where finds :: [[(Pos, Set.Set Pos)]]
-                finds =
-                  ([((0,0,0), Set.fromList (head scans))]:)
+  where resolveProbes :: [[Pos]] -> ([Pos], Scan)
+        resolveProbes scans = mapRight (Set.unions . map fst) $ unzip $ concat batches
+          where batches :: [[(Pos, ScanWithDists)]]
+                -- place probes in batches because the concatenation is too eager
+                batches =
+                  ([((0,0,0), computeDists $ Set.fromList (head scans))]:)
                   $ takeWhile (not . null)
                   $ evalState
-                  (traverse stepFold finds)
-                  (map probeAllOrientations (tail scans))
+                  (traverse placeNextBatch batches)
+                  (map processScan (tail scans))
 
-        probeAllOrientations :: [Pos] -> [Set.Set Pos]
-        probeAllOrientations probe = map Set.fromList $ transpose $ map allOrientations probe
+        computeDists :: Scan -> ScanWithDists
+        computeDists scan = (scan, freqs)
+          -- these are maps instead of sets out of principle;
+          -- but in practice no distance appears more than once
+          where points = Set.toList scan
+                freqs = Map.delete (0,0,0) $ frequencies $ (.-) <$> points <*> points
 
-        stepFold :: [(Pos, Set.Set Pos)] -> State [[Set.Set Pos]] [(Pos, Set.Set Pos)]
-        stepFold probes = concat <$> traverse matchesWith (map snd probes)
+        processScan :: [Pos] -> ProcessedScan
+        processScan raw = map (computeDists . Set.fromList) $ transpose $ map allOrientations raw
 
-        matchesWith :: Set.Set Pos -> State [[Set.Set Pos]] [(Pos, Set.Set Pos)]
-        matchesWith probe = state
+        placeNextBatch :: [(Pos, ScanWithDists)] -> State [ProcessedScan] [(Pos, ScanWithDists)]
+        placeNextBatch batch = concat <$> traverse placeProbesAgainst (map snd batch)
+
+        placeProbesAgainst :: ScanWithDists -> State [ProcessedScan] [(Pos, ScanWithDists)]
+        placeProbesAgainst probe = state
           $ partitionEithers . map
-          (fromMaybe . Right <*> fmap Left . listToMaybe . mapMaybe (doMatch probe))
+          (fromMaybe . Right <*> fmap Left . listToMaybe . mapMaybe (tryMatch probe))
 
-        doMatch :: Set.Set Pos -> Set.Set Pos -> Maybe (Pos, Set.Set Pos)
-        doMatch probeA probeB = listToMaybe $ do
+        tryMatch :: ScanWithDists -> ScanWithDists -> Maybe (Pos, ScanWithDists)
+        tryMatch (probeA, distsA) (probeB, distsB) = listToMaybe $ do
+          let commonDists = Map.intersectionWith min distsA distsB
+          -- the scans can only match if they share enough distances;
+          -- the converse is not guaranteed, although it is true in practice
+          guard (sum commonDists >= 66) -- 12 choose 2
           a <- Set.toList probeA
           b <- Set.toList probeB
           let mapped = Set.mapMonotonic ((.+a) . (.-b)) probeB
               hits = Set.intersection probeA mapped
           guard (Set.size hits >= 12)
-          return ((a.-b), mapped)
+          return ((a.-b), (mapped, distsB))
