@@ -1,10 +1,5 @@
 import qualified Text.ParserCombinators.ReadP as RP
-import Control.Monad
-import Control.Applicative
-import Data.Maybe
-import Data.Function
-import Util
-import Pairs
+import Bits
 
 data Tree a = Pair (Tree a, Tree a) | Single a
 type SnF = Tree Int

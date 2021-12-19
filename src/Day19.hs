@@ -1,19 +1,6 @@
-import qualified Data.Set as Set
 import qualified Data.Map as Map
-import qualified Text.ParserCombinators.ReadP as RP
-import Control.Monad
-import Control.Applicative
-import Control.Monad.State
-import Data.Array
-import Data.List
-import Data.Maybe
-import Data.Either
-import Data.Char
-import Data.Function
-import Data.Ix
-import Data.Tuple
-import Debug.Trace
-import Util
+import qualified Data.Set as Set
+import Bits
 
 type Pos = (Int, Int, Int)
 type Scan = Set.Set Pos

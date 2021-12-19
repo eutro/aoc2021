@@ -1,17 +1,5 @@
 import qualified Data.Set as Set
-import qualified Data.Map as Map
-import qualified Text.ParserCombinators.ReadP as RP
-import Control.Monad
-import Data.Array
-import Data.List
-import Data.Maybe
-import Data.Either
-import Data.Char
-import Data.Function
-import Data.Ix
-import Data.Tuple
-import Debug.Trace
-import Util
+import Bits
 
 type Pos = (Int, Int)
 type Grid = Array Pos Int
