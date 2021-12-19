@@ -39,15 +39,15 @@ main = do
   print $ Set.size beacons
   print $ maximum $ manhattan <$> probes <*> probes
   where resolveProbes :: [[Pos]] -> ([Pos], Scan)
-        resolveProbes scans = mapRight (Set.unions . map fst) $ unzip $ concat batches
-          where batches :: [[(Pos, ScanWithDists)]]
-                -- place probes in batches because the concatenation is too eager
-                batches =
-                  ([((0,0,0), computeDists $ Set.fromList (head scans))]:)
-                  $ takeWhile (not . null)
-                  $ evalState
-                  (traverse placeNextBatch batches)
-                  (map processScan (tail scans))
+        resolveProbes scans = mapRight (Set.unions . map fst) $ unzip $ probes
+          where probes :: [(Pos, ScanWithDists)]
+                probes =
+                  (((0,0,0), computeDists $ Set.fromList (head scans)):)
+                  $ concat
+                  $ catMaybes
+                  $ takeWhile isJust
+                  $ evalState (mapM placeProbesAgainst (map snd probes))
+                  $ map processScan (tail scans)
 
         computeDists :: Scan -> ScanWithDists
         computeDists scan = (scan, freqs)
@@ -61,12 +61,10 @@ main = do
         processScan raw = (sets, snd $ computeDists unrotated)
           where sets@(unrotated:_) = map Set.fromList $ transpose $ map allOrientations raw
 
-        placeNextBatch :: [(Pos, ScanWithDists)] -> State [ProcessedScan] [(Pos, ScanWithDists)]
-        placeNextBatch batch = concat <$> traverse placeProbesAgainst (map snd batch)
-
-        placeProbesAgainst :: ScanWithDists -> State [ProcessedScan] [(Pos, ScanWithDists)]
-        placeProbesAgainst probe = state
-          $ partitionEithers . map (fromMaybe . Right <*> fmap Left . tryMatch probe)
+        placeProbesAgainst :: ScanWithDists -> State [ProcessedScan] (Maybe [(Pos, ScanWithDists)])
+        placeProbesAgainst probe = mapStateT (maybe (Identity (Nothing, [])) Identity) $ do
+          get >>= guard . not . null
+          pure <$> state (partitionEithers . map (fromMaybe . Right <*> fmap Left . tryMatch probe))
 
         tryMatch :: ScanWithDists -> ProcessedScan -> Maybe (Pos, ScanWithDists)
         tryMatch (probeA, distsA) (probeBs, distsB) = listToMaybe $ do
