@@ -72,12 +72,14 @@ main = do
         tryMatch (probeA, distsA) (probeBs, distsB) = listToMaybe $ do
           let commonDists = Map.intersectionWith min distsA distsB
           -- the scans can only match if they share enough distances;
-          -- the converse is not guaranteed, although it is actually true in practice
+          -- the converse is not guaranteed, although it is actually true in practice.
+          -- this guard is also invariant under rotations, saving a lot of time
           guard (sum commonDists >= 66) -- 12 choose 2
           probeB <- probeBs
-          a <- Set.toList probeA
-          b <- Set.toList probeB
-          let mapped = Set.mapMonotonic ((.+a) . (.-b)) probeB
-              hits = Set.intersection probeA mapped
-          guard (Set.size hits >= 12)
-          return ((a.-b), (mapped, distsB))
+          let (offset, offsetC) = maximumBy (compare `on` snd)
+                                  $ Map.toList
+                                  $ frequencies
+                                  $ (.-) <$> Set.toList probeA <*> Set.toList probeB
+          guard (offsetC >= 12)
+          let mapped = Set.mapMonotonic (.+offset) probeB
+          return (offset, (mapped, distsB))
