@@ -45,41 +45,35 @@ main = do
                 . lines)
            . splitOn "\n\n"
            <$> getContents
-  let probes :: [Pos]
-      beacons :: Set.Set Pos
-      (probes, beacons) = mapRight Set.unions $ unzip $ concat finds
-        where finds = map fst
-                $ takeWhile (not . null . fst)
-                $ scanl stepFold ([((0,0,0), Set.fromList (head scans))],
-                                  (map (map Set.fromList . transpose . map allOrientations)
-                                   $ tail scans))
-                finds
-              stepFold :: ([(Pos, Set.Set Pos)], [[Set.Set Pos]]) ->
-                          [(Pos, Set.Set Pos)] ->
-                          ([(Pos, Set.Set Pos)], [[Set.Set Pos]])
-              stepFold (_, remaining) probes =
-                let results = scanl
-                      (\ (_, remaining) set -> matchesWith set remaining)
-                      ([], remaining)
-                      $ map snd probes
-                in (concatMap fst results, snd $ last results)
+  let (probes, beacons) = resolveProbes scans
   print $ Set.size beacons
   print $ maximum $ manhattan <$> probes <*> probes
-  return ()
-  where doMatch :: Set.Set Pos -> Set.Set Pos -> Maybe (Pos, Set.Set Pos)
-        doMatch probeA probeB = fmap fst $ uncons $ do
+  where resolveProbes :: [[Pos]] -> ([Pos], Set.Set Pos)
+        resolveProbes scans = mapRight Set.unions $ unzip $ concat finds
+          where finds :: [[(Pos, Set.Set Pos)]]
+                finds =
+                  ([((0,0,0), Set.fromList (head scans))]:)
+                  $ takeWhile (not . null)
+                  $ evalState
+                  (traverse stepFold finds)
+                  (map probeAllOrientations (tail scans))
+
+        probeAllOrientations :: [Pos] -> [Set.Set Pos]
+        probeAllOrientations probe = map Set.fromList $ transpose $ map allOrientations probe
+
+        stepFold :: [(Pos, Set.Set Pos)] -> State [[Set.Set Pos]] [(Pos, Set.Set Pos)]
+        stepFold probes = concat <$> traverse matchesWith (map snd probes)
+
+        matchesWith :: Set.Set Pos -> State [[Set.Set Pos]] [(Pos, Set.Set Pos)]
+        matchesWith probe = state
+          $ partitionEithers . map
+          (fromMaybe . Right <*> fmap Left . listToMaybe . mapMaybe (doMatch probe))
+
+        doMatch :: Set.Set Pos -> Set.Set Pos -> Maybe (Pos, Set.Set Pos)
+        doMatch probeA probeB = listToMaybe $ do
           a <- Set.toList probeA
           b <- Set.toList probeB
           let mapped = Set.mapMonotonic ((.+a) . (.-b)) probeB
               hits = Set.intersection probeA mapped
           guard (Set.size hits >= 12)
-          trace (show (a.-b)) $ return ((a.-b), mapped)
-
-        tryMatch :: Set.Set Pos -> [Set.Set Pos] -> Maybe (Pos, Set.Set Pos)
-        tryMatch probeA probeBs =
-          foldl (<|>) Nothing
-          $ map (doMatch probeA) probeBs
-
-        matchesWith :: Set.Set Pos -> [[Set.Set Pos]] -> ([(Pos, Set.Set Pos)], [[Set.Set Pos]])
-        matchesWith probe restProbes =
-          partitionEithers [maybe (Right rp) Left $ tryMatch probe rp | rp <- restProbes]
+          return ((a.-b), mapped)
