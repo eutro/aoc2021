@@ -3,7 +3,7 @@ import qualified Data.Set as Set
 import Bits
 
 type Pos = (Int, Int, Int)
-type Scan = Set.Set Pos
+type Scan = [Pos]
 type Dists = Map.Map Int Int
 type ScanWithDists = (Scan, Dists)
 type CompleteProbe = (Pos, ScanWithDists)
@@ -38,11 +38,11 @@ main = do
   let (probes, beacons) = resolveProbes scans
   print $ Set.size beacons
   print $ maximum $ manhattan <$> probes <*> probes
-  where resolveProbes :: [[Pos]] -> ([Pos], Scan)
-        resolveProbes scans = mapRight (Set.unions . map fst) $ unzip $ probes
+  where resolveProbes :: [[Pos]] -> ([Pos], Set.Set Pos)
+        resolveProbes scans = mapRight (Set.fromList . concatMap fst) $ unzip $ probes
           where probes :: [(Pos, ScanWithDists)]
                 probes =
-                  (((0,0,0), computeDists $ Set.fromList (head scans)):)
+                  (((0,0,0), computeDists $ head scans):)
                   $ concat
                   $ catMaybes
                   $ takeWhile isJust
@@ -51,15 +51,14 @@ main = do
 
         computeDists :: Scan -> ScanWithDists
         computeDists scan = (scan, freqs)
-          where points = Set.toList scan
-                freqs = Map.map (`div` 2)
+          where freqs = Map.map (`div` 2)
                         $ Map.delete 0
                         $ frequencies
-                        $ manhattan <$> points <*> points
+                        $ manhattan <$> scan <*> scan
 
         processScan :: [Pos] -> ProcessedScan
         processScan raw = (sets, snd $ computeDists unrotated)
-          where sets@(unrotated:_) = map Set.fromList $ transpose $ map allOrientations raw
+          where sets@(unrotated:_) = transpose $ map allOrientations raw
 
         placeProbesAgainst :: ScanWithDists -> State [ProcessedScan] (Maybe [(Pos, ScanWithDists)])
         placeProbesAgainst probe = mapStateT (maybe (Identity (Nothing, [])) Identity) $ do
@@ -77,7 +76,7 @@ main = do
           let (offset, offsetC) = maximumBy (compare `on` snd)
                                   $ Map.toList
                                   $ frequencies
-                                  $ (.-) <$> Set.toList probeA <*> Set.toList probeB
+                                  $ (.-) <$> probeA <*> probeB
           guard (offsetC >= 12)
-          let mapped = Set.mapMonotonic (.+offset) probeB
+          let mapped = map (.+offset) probeB
           return (offset, (mapped, distsB))
