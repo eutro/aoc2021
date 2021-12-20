@@ -11,6 +11,7 @@ module Bits
    module Data.Function,
    module Data.Ix,
    module Data.Tuple,
+   module Data.Bits,
    module Debug.Trace,
    module Util) where
 
@@ -26,5 +27,6 @@ import Data.Char
 import Data.Function
 import Data.Ix
 import Data.Tuple
+import Data.Bits
 import Debug.Trace
 import Util

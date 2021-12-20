@@ -6,6 +6,7 @@ where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Data.List
+import Data.Function
 import Debug.Trace
 import Pairs
 
@@ -66,10 +67,12 @@ frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 
 toGrid :: Set.Set (Int, Int) -> String
 toGrid points = unlines
-                $ [[" #"!!(fromEnum $ (x, y) `Set.member` points)
+                $ [[".#"!!(fromEnum $ (x, y) `Set.member` points)
                    | x <- [minx..maxx]] | y <- [miny..maxy]]
-  where (minx, miny) = minimum points
-        (maxx, maxy) = maximum points
+  where (minx, _) = minimumBy (compare `on` fst) points
+        (maxx, _) = maximumBy (compare `on` fst) points
+        (_, miny) = minimumBy (compare `on` snd) points
+        (_, maxy) = maximumBy (compare `on` snd) points
 
 minMax :: (Foldable t, Ord a) => t a -> (a, a)
 minMax l = (minimum l, maximum l)
