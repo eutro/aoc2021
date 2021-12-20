@@ -12,7 +12,7 @@ type Image = Array Pos Bool
 main :: IO ()
 main = do
   (algo, image) <- parseInput <$> getContents
-  forM_ [2, 50] (print . (enhanceSeq algo image !!))
+  forM_ [2, 50] $ print . imageScore . (enhanceSeq algo image !!)
   where parseInput :: String -> (Algo, Image)
         parseInput input =
           (listArray (0, pred $ length algoList) algoList,
@@ -22,12 +22,15 @@ main = do
                 imageLines = transpose $ lines imageRaw
                 imageBounds = ((1, 1), (length $ head imageLines, length imageLines))
 
-        enhanceSeq :: Algo -> Image -> [Int]
+        imageScore :: Image -> Int
+        imageScore image = fromEnum <$> image & sum
+
+        enhanceSeq :: Algo -> Image -> [Image]
         enhanceSeq algo startImage =
           evalState doEnhances startImage
-          where doEnhances :: State Image [Int]
+          where doEnhances :: State Image [Image]
                 doEnhances = traverse enhanceOnce [0..]
-                enhanceOnce :: Int -> State Image Int
+                enhanceOnce :: Int -> State Image Image
                 enhanceOnce index = do
                   arr <- get
                   let dflt = algo ! 0 && index `mod` 2 == 1
@@ -41,10 +44,7 @@ main = do
                     pos <- (range outBounds)
                     let surrounding = map getPos (neighbours pos)
                     return $ (algo!) $ readBinBools surrounding
-                  return $
-                    if dflt
-                    then undefined
-                    else sum $ fmap fromEnum arr
+                  return arr
 
         expand :: (Pos, Pos) -> (Pos, Pos)
         expand ((xm, ym), (xM, yM)) = ((xm - 1, ym - 1), (xM + 1, yM + 1))

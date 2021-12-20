@@ -10,15 +10,15 @@ import Data.Function
 import Data.Ix
 import Data.Tuple
 import Debug.Trace
-import Util
+import Util hiding (gridBounds)
 
 type Pos = (Int, Int)
 type Grid = Array Pos Int
 
+neighbours = flip map (delete (0, 0) $ range ((-1, -1), (1, 1))) . zipPos (+)
+
 gridBounds :: (Pos, Pos)
 gridBounds = ((0, 0), (9, 9))
-
-neighbours = flip map (delete (0, 0) $ range ((-1, -1), (1, 1))) . zipPos (+)
 
 tick :: Grid -> (Grid, Int)
 tick grid =

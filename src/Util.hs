@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeSynonymInstances, FlexibleInstances #-}
+
 module Util
   (module Util,
    module Pairs)
@@ -5,6 +7,7 @@ where
 
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import qualified Data.Array as Arr
 import Data.List
 import Data.Function
 import Debug.Trace
@@ -65,14 +68,30 @@ conjoin preds x = all ($ x) preds
 frequencies :: (Ord a, Num n) => [a] -> (Map.Map a n)
 frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 
-toGrid :: Set.Set (Int, Int) -> String
-toGrid points = unlines
-                $ [[".#"!!(fromEnum $ (x, y) `Set.member` points)
-                   | x <- [minx..maxx]] | y <- [miny..maxy]]
-  where (minx, _) = minimumBy (compare `on` fst) points
-        (maxx, _) = maximumBy (compare `on` fst) points
-        (_, miny) = minimumBy (compare `on` snd) points
-        (_, maxy) = maximumBy (compare `on` snd) points
+class UtilGrid a where
+  gridBounds :: a -> ((Int, Int), (Int, Int))
+  gridHasPos :: a -> (Int, Int) -> Bool
+
+type SparseGrid = Set.Set (Int, Int)
+type DenseGrid = Arr.Array (Int, Int) Bool
+
+instance UtilGrid SparseGrid where
+  gridBounds grid = ((minx, miny), (maxx, maxy))
+    where (minx, _) = minimumBy (compare `on` fst) grid
+          (maxx, _) = maximumBy (compare `on` fst) grid
+          (_, miny) = minimumBy (compare `on` snd) grid
+          (_, maxy) = maximumBy (compare `on` snd) grid
+  gridHasPos grid pos = pos `Set.member` grid
+
+instance UtilGrid DenseGrid where
+  gridBounds = Arr.bounds
+  gridHasPos = (Arr.!)
+
+toGrid :: UtilGrid a => a -> String
+toGrid grid = unlines
+              $ [[".#"!!(fromEnum $ grid `gridHasPos` (x, y))
+                 | x <- [minx..maxx]] | y <- [miny..maxy]]
+  where ((minx, miny), (maxx, maxy)) = gridBounds grid
 
 minMax :: (Foldable t, Ord a) => t a -> (a, a)
 minMax l = (minimum l, maximum l)
