@@ -3,8 +3,7 @@ import Bits
 
 type Pos = (Int, Int)
 type Grid = Array Pos Int
-
-neighbours (x, y) = [(x-1, y), (x+1, y), (x, y-1), (x, y+1)]
+type DState = State (Set.Set Pos, Set.Set (Int, Pos))
 
 main :: IO ()
 main = do
@@ -19,16 +18,33 @@ main = do
   forM_ [1, 5] solve
   where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
         dijkstras getRisk bounds@(start, end) = ret
-          where Left ret = iterateM step (Set.empty, Set.fromList [(0, start)])
-                step (seen, queue)
-                  | nextPos == end = Left nextRisk
-                  | nextPos `Set.member` seen = Right (seen, rest)
-                  | otherwise = Right (nextPos `Set.insert` seen,
-                                       Set.union queue
-                                       $ Set.fromList
-                                       [(nextRisk + getRisk p, p)
-                                       | p <- neighbours nextPos,
-                                         p `Set.notMember` seen,
-                                         inRange bounds p])
-                  where ((nextRisk, nextPos), rest) = Set.deleteFindMin queue
+          where ret = evalState stepAll (Set.empty, Set.fromList [(0, start)])
+                stepAll :: DState Int
+                stepAll = fmap (head . concat) $ sequence $ repeat $ stepOnce
+                queuePop :: DState (Int, Pos)
+                queuePop = do
+                  (seen, queue) <- get
+                  let (ret, rest) = Set.deleteFindMin queue
+                  put (seen, rest)
+                  return ret
+                stepOnce :: DState [Int]
+                stepOnce = do
+                  (nextRisk, nextPos) <- queuePop
+                  (seen, queue) <- get
+                  if nextPos `Set.member` seen
+                    then return empty
+                    else
+                    if nextPos == end
+                    then return [nextRisk]
+                    else do
+                      put (nextPos `Set.insert` seen,
+                           Set.union queue
+                           $ Set.fromList
+                           [(nextRisk + getRisk p, p)
+                           | p <- neighbours nextPos,
+                             p `Set.notMember` seen,
+                             inRange bounds p])
+                      return empty
 
+        neighbours :: Pos -> [Pos]
+        neighbours pos = map (zipPos (+) pos) [(-1, 0), (1, 0), (0, -1), (0, 1)]
