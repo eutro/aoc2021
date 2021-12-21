@@ -4,16 +4,6 @@ import Bits
 
 data Player = Player {remaining::Int,pos::Int} deriving (Eq, Ord, Ix, Show)
 
-setRem :: Int -> Player -> Player
-setRem x (Player _ p) = Player x p
-
-stepPlayer :: Int -> Player -> Player
-stepPlayer n (Player r p) = Player (r - np) np
-  where np = mod1 (p + n) 10
-
-mod1 :: Int -> Int -> Int
-mod1 a b = succ $ (`mod` b) $ pred a
-
 main :: IO ()
 main = do
   players <- parsePlayers <$> getContents
@@ -31,32 +21,37 @@ main = do
           where totalRolls = 3 * length unwonStates
                 loserRem = remaining $ snd (last unwonStates)
 
-                unwonStates = takeWhile (not . winning) stateSeq
-                  where winning (_, p2) = remaining p2 <= 0
-
-                tripleRolls = map (sum . take 3) $ iterate (drop 3) singleRolls
-                  where singleRolls = cycle [1..100]
+                unwonStates = takeWhile unwon stateSeq
+                  where unwon (_, p2) = remaining p2 > 0
 
                 stateSeq = scanl stepState start tripleRolls
                   where stepState :: FoldFn (Player, Player) Int
                         stepState (p1, p2) roll = (p2, stepPlayer roll p1)
 
+                tripleRolls = map (sum . take 3) $ iterate (drop 3) singleRolls
+                  where singleRolls = cycle [1..100]
+
         quantumDie :: (Player, Player) -> (Integer, Integer)
-        quantumDie =  compute `memoisedOver` playerDomain
+        quantumDie = compute `memoisedOver` playerDomain
           where compute (p1, p2) = sumPos $ map computeRoll tripleRolls
                   where computeRoll (roll, freq)
-                          | remaining p1n <= 0 = (freq, 0)
-                          | otherwise = mapBoth (freq*) $ swap $ quantumDie (p2, p1n)
-                          where p1n = stepPlayer roll p1
+                          | remaining p1' <= 0 = (freq, 0)
+                          | otherwise = mapBoth (freq*) $ swap $ quantumDie (p2, p1')
+                          where p1' = stepPlayer roll p1
 
                 memoisedOver :: Ix a => (a -> b) -> (a, a) -> a -> b
                 f `memoisedOver` domain = (!) $ listArray domain $ map f $ range domain
 
-                playerDomain = ((minPlayer, minPlayer), (maxPlayer, maxPlayer))
-                  where minPlayer = Player 1 1
-                        maxPlayer = Player 21 10
+                playerDomain = (join (,) (Player 1 1), join (,) (Player 21 10))
 
                 tripleRolls :: [(Int, Integer)]
                 tripleRolls = Map.toList $ frequencies $ add3 <$> die <*> die <*> die
                   where die = [1,2,3]
                         add3 x y z = x + y + z
+
+        setRem :: Int -> Player -> Player
+        setRem x (Player _ p) = Player x p
+
+        stepPlayer :: Int -> Player -> Player
+        stepPlayer n (Player r p) = Player (r - p') p'
+          where p' = mod1 (p + n) 10

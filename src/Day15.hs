@@ -11,7 +11,7 @@ main = do
   let ls = map (map digitToInt) $ lines input
       gridSize@(w, h) = (length $ head ls, length ls)
       grid = listArray ((0, 0), (w-1, h-1)) $ concat ls :: Grid
-      getRisk pos = succ $ (`mod` 9) $ pred $
+      getRisk pos = (`mod1` 9) $
                     (grid ! zipPos mod pos gridSize) +
                     (uncurry (+) $ zipPos div pos gridSize)
       solve sf = print $ dijkstras getRisk ((0, 0), join mapP (pred . (sf*)) gridSize)

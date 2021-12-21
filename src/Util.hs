@@ -112,3 +112,6 @@ median :: Ord a => [a] -> a
 median l = sort l !! div (length l) 2
 
 type FoldFn a b = a -> b -> a
+
+mod1 :: Int -> Int -> Int
+mod1 a b = succ $ (`mod` b) $ pred a
