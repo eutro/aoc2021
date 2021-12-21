@@ -110,3 +110,5 @@ triangle n = div (n * (n + 1)) 2
 
 median :: Ord a => [a] -> a
 median l = sort l !! div (length l) 2
+
+type FoldFn a b = a -> b -> a

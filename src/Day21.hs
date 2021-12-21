@@ -16,32 +16,48 @@ mod1 a b = succ $ (`mod` b) $ pred a
 
 main :: IO ()
 main = do
-  players <- parseInput <$> getContents
-  print $ maximum $ pToList $ countWins $ listToP $ map (setRem 21) players
+  players <- parsePlayers <$> getContents
+  print $ uncurry (*) $ mapRight (1000-) $ deterministicDie $ players 1000
+  print $ uncurry max $ quantumDie $ players 21
   return ()
-  where parseInput :: String -> [Player]
-        parseInput input = do
-          line <- lines input
-          let pos = read $ drop (length "Player 1 starting position: ") line
-          return $ Player 0 pos
+  where parsePlayers :: String -> Int -> (Player, Player)
+        parsePlayers input = makePlayers
+          where makePlayers scoreToWin = listToP $ Player <$> [scoreToWin] <*> starts
+                starts = read . drop (length "Player N starting position: ")
+                         <$> take 2 (lines input)
 
-        countWins :: (Player, Player) -> (Integer, Integer)
-        countWins (p1, p2) = (winsFor (p1, p2, True), winsFor (p1, p2, False))
+        deterministicDie :: (Player, Player) -> (Int, Int)
+        deterministicDie start = (totalRolls, loserRem)
+          where totalRolls = 3 * length unwonStates
+                loserRem = remaining $ snd (last unwonStates)
 
-        winsFor :: (Player, Player, Bool) -> Integer
-        winsFor idx = (!idx) $ listArray bounds $ map compute $ range bounds
-          where compute (p1, p2, isP1) = sum $ do
+                unwonStates = takeWhile (not . winning) stateSeq
+                  where winning (_, p2) = remaining p2 <= 0
+
+                tripleRolls = map (sum . take 3) $ iterate (drop 3) singleRolls
+                  where singleRolls = cycle [1..100]
+
+                stateSeq = scanl stepState start tripleRolls
+                  where stepState :: FoldFn (Player, Player) Int
+                        stepState (p1, p2) roll = (p2, stepPlayer roll p1)
+
+        quantumDie :: (Player, Player) -> (Integer, Integer)
+        quantumDie =  compute `memoisedOver` playerDomain
+          where compute (p1, p2) = foldl (zipPos (+)) (0, 0) $ do
                   (roll, freq) <- tripleRolls
                   let p1n = stepPlayer roll p1
                   return $ if remaining p1n <= 0
-                    then [0, freq]!!(fromEnum isP1)
-                    else freq * winsFor (p2, p1n, not isP1)
+                    then (freq, 0)
+                    else mapBoth (freq*) $ swap $ quantumDie (p2, p1n)
 
-                bounds = ((minPlayer, minPlayer, False), (maxPlayer, maxPlayer, True))
-                minPlayer = Player 1 1
-                maxPlayer = Player 21 10
+                memoisedOver :: Ix a => (a -> b) -> (a, a) -> a -> b
+                f `memoisedOver` domain = (!) $ listArray domain $ map f $ range domain
 
-        tripleRolls :: [(Int, Integer)]
-        tripleRolls = Map.toList $ frequencies $ add3 <$> die <*> die <*> die
-          where die = [1,2,3]
-                add3 x y z = x + y + z
+                playerDomain = ((minPlayer, minPlayer), (maxPlayer, maxPlayer))
+                  where minPlayer = Player 1 1
+                        maxPlayer = Player 21 10
+
+                tripleRolls :: [(Int, Integer)]
+                tripleRolls = Map.toList $ frequencies $ add3 <$> die <*> die <*> die
+                  where die = [1,2,3]
+                        add3 x y z = x + y + z

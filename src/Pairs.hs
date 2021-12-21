@@ -24,6 +24,9 @@ updateP f PairRight (l, r) = (l, f r)
 mapP :: (a -> c) -> (b -> d) -> (a, b) -> (c, d)
 mapP f g (x, y) = (f x, g y)
 
+mapBoth :: (a -> b) -> (a, a) -> (b, b)
+mapBoth f = mapP f f
+
 mapLeft :: (a -> b) -> (a, c) -> (b, c)
 mapLeft f (x, y) = (f x, y)
 
