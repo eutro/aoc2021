@@ -2,55 +2,46 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Bits
 
-data Player = Player {score::Int,pos::Int} deriving Show
-data GameState = GS {die::[Int],rolls::Int,players::(Player, Player)} deriving Show
-type RState = State GameState
+data Player = Player {remaining::Int,pos::Int} deriving (Eq, Ord, Ix, Show)
+
+setRem :: Int -> Player -> Player
+setRem x (Player _ p) = Player x p
+
+stepPlayer :: Int -> Player -> Player
+stepPlayer n (Player r p) = Player (r - np) np
+  where np = mod1 (p + n) 10
 
 mod1 :: Int -> Int -> Int
-mod1 a b = succ $ pred a `mod` b
+mod1 a b = succ $ (`mod` b) $ pred a
 
 main :: IO ()
 main = do
-  game <- parseInput <$> getContents
-  print $ head $ catMaybes $ evalState (sequence $ repeat stepGame) game
+  players <- parseInput <$> getContents
+  print $ maximum $ pToList $ countWins $ listToP $ map (setRem 21) players
   return ()
-  where parseInput :: String -> GameState
-        parseInput input = GS (cycle [1..100]) 0 $ listToP $ do
+  where parseInput :: String -> [Player]
+        parseInput input = do
           line <- lines input
           let pos = read $ drop (length "Player 1 starting position: ") line
           return $ Player 0 pos
 
-        stepGame :: RState (Maybe Int)
-        stepGame = do
-          p1s <- stepPlayer PairLeft
-          if p1s >= 1000
-            then Just <$> mulScores PairRight
-            else do
-            p2s <- stepPlayer PairRight
-            if p2s >= 1000
-              then Just <$> mulScores PairLeft
-              else return Nothing
+        countWins :: (Player, Player) -> (Integer, Integer)
+        countWins (p1, p2) = (winsFor (p1, p2, True), winsFor (p1, p2, False))
 
-        mulScores :: PairSide -> RState Int
-        mulScores loser = do
-          GS _ rolls players <- get
-          return $ score (getP loser players) * rolls
+        winsFor :: (Player, Player, Bool) -> Integer
+        winsFor idx = (!idx) $ listArray bounds $ map compute $ range bounds
+          where compute (p1, p2, isP1) = sum $ do
+                  (roll, freq) <- tripleRolls
+                  let p1n = stepPlayer roll p1
+                  return $ if remaining p1n <= 0
+                    then [0, freq]!!(fromEnum isP1)
+                    else freq * winsFor (p2, p1n, not isP1)
 
-        stepPlayer :: PairSide -> RState Int
-        stepPlayer side = do
-          roll <- rollThrice
-          GS die rolls players <- get
-          let updatePlayer (Player score pos) = Player (score+newPos) newPos
-                where newPos = (pos + roll) `mod1` 10
-              np = updateP updatePlayer side players
-          put $ GS die rolls np
-          return $ score $ getP side np
+                bounds = ((minPlayer, minPlayer, False), (maxPlayer, maxPlayer, True))
+                minPlayer = Player 1 1
+                maxPlayer = Player 21 10
 
-        rollThrice :: RState Int
-        rollThrice = sum <$> replicateM 3 rollOnce
-
-        rollOnce :: RState Int
-        rollOnce = do
-          GS (die:restDie) rolls players <- get
-          put $ GS restDie (succ rolls) players
-          return die
+        tripleRolls :: [(Int, Integer)]
+        tripleRolls = Map.toList $ frequencies $ add3 <$> die <*> die <*> die
+          where die = [1,2,3]
+                add3 x y z = x + y + z
