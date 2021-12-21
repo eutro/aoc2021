@@ -5,6 +5,12 @@ data PairSide = PairLeft | PairRight deriving Show
 zipPos :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
 zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
 
+addPos :: Num a => (a, a) -> (a, a) -> (a, a)
+addPos = zipPos (+)
+
+sumPos :: (Foldable f, Num a) => f (a, a) -> (a, a)
+sumPos l = foldl addPos (0, 0) l
+
 otherSide :: PairSide -> PairSide
 otherSide PairLeft = PairRight
 otherSide PairRight = PairLeft

@@ -43,12 +43,11 @@ main = do
 
         quantumDie :: (Player, Player) -> (Integer, Integer)
         quantumDie =  compute `memoisedOver` playerDomain
-          where compute (p1, p2) = foldl (zipPos (+)) (0, 0) $ do
-                  (roll, freq) <- tripleRolls
-                  let p1n = stepPlayer roll p1
-                  return $ if remaining p1n <= 0
-                    then (freq, 0)
-                    else mapBoth (freq*) $ swap $ quantumDie (p2, p1n)
+          where compute (p1, p2) = sumPos $ map computeRoll tripleRolls
+                  where computeRoll (roll, freq)
+                          | remaining p1n <= 0 = (freq, 0)
+                          | otherwise = mapBoth (freq*) $ swap $ quantumDie (p2, p1n)
+                          where p1n = stepPlayer roll p1
 
                 memoisedOver :: Ix a => (a -> b) -> (a, a) -> a -> b
                 f `memoisedOver` domain = (!) $ listArray domain $ map f $ range domain
