@@ -1,8 +1,5 @@
 import qualified Data.Map as Map
 import qualified Data.Set as Set
-import Data.Array.ST
-import Data.Array.MArray
-import Control.Monad.ST
 import Bits
 
 type Pos = (Int, Int)
