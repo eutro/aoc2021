@@ -81,18 +81,20 @@ main = do
           heapPush (0, start)
           fix $ \ loop -> do
             (risk, pos) <- heapPop
-            if pos == end
-              then return risk
-              else do
-              let check = \ nb ->
-                    if inRange bounds nb
-                    then not <$> readArray seen nb
-                    else return False
-              filterM check (neighbours pos)
-                >>= mapM_ (\ nb -> do
-                              heapPush (risk + getRisk nb, nb)
-                              writeArray seen nb True)
-              loop
+            nbs <- flip filterM (neighbours pos) $ \ nb ->
+              if inRange bounds nb
+              then not <$> readArray seen nb
+              else return False
+            (>>= either return (const loop))
+              $ fmap sequence
+              $ forM nbs $ \ nb ->
+              let nbr = risk + getRisk nb
+              in if nb == end
+              then return $ Left nbr
+              else Right <$> do
+                heapPush (nbr, nb)
+                writeArray seen nb True
+                return ()
 
         neighbours :: Pos -> [Pos]
         neighbours pos = map (addPos pos) [(-1, 0), (1, 0), (0, -1), (0, 1)]
