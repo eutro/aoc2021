@@ -12,6 +12,7 @@ module Bits
    module Data.Ix,
    module Data.Tuple,
    module Data.Bits,
+   module Data.Monoid,
    module Debug.Trace,
    module Util) where
 
@@ -28,5 +29,6 @@ import Data.Function
 import Data.Ix
 import Data.Tuple
 import Data.Bits
+import Data.Monoid
 import Debug.Trace
 import Util

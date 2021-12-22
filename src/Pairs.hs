@@ -5,6 +5,9 @@ data PairSide = PairLeft | PairRight deriving Show
 zipPos :: (a -> b -> c) -> (a, a) -> (b, b) -> (c, c)
 zipPos f (a1, a2) (b1, b2) = (f a1 b1, f a2 b2)
 
+transposeP :: ((a, b), (c, d)) -> ((a, c), (b, d))
+transposeP ((a, b), (c, d)) = ((a, c), (b, d))
+
 addPos :: Num a => (a, a) -> (a, a) -> (a, a)
 addPos = zipPos (+)
 
