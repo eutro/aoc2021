@@ -1,4 +1,8 @@
 import qualified Data.Set as Set
+import Control.Monad.ST
+import Data.Array.ST
+import Data.STRef
+import Data.Array.MArray
 import Bits
 
 type Pos = (Int, Int)
@@ -17,34 +21,78 @@ main = do
       solve sf = print $ dijkstras getRisk ((0, 0), join mapP (pred . (sf*)) gridSize)
   forM_ [1, 5] solve
   where dijkstras :: (Pos -> Int) -> (Pos, Pos) -> Int
-        dijkstras getRisk bounds@(start, end) = ret
-          where ret = evalState stepAll (Set.empty, Set.fromList [(0, start)])
-                stepAll :: DState Int
-                stepAll = fmap (head . concat) $ sequence $ repeat $ stepOnce
-                queuePop :: DState (Int, Pos)
-                queuePop = do
-                  (seen, queue) <- get
-                  let (ret, rest) = Set.deleteFindMin queue
-                  put (seen, rest)
-                  return ret
-                stepOnce :: DState [Int]
-                stepOnce = do
-                  (nextRisk, nextPos) <- queuePop
-                  (seen, queue) <- get
-                  if nextPos `Set.member` seen
-                    then return empty
-                    else
-                    if nextPos == end
-                    then return [nextRisk]
-                    else do
-                      put (nextPos `Set.insert` seen,
-                           Set.union queue
-                           $ Set.fromList
-                           [(nextRisk + getRisk p, p)
-                           | p <- neighbours nextPos,
-                             p `Set.notMember` seen,
-                             inRange bounds p])
-                      return empty
+        dijkstras getRisk bounds@(start, end) = runST $ do
+          -- array for seen set provides fast and constant time access;
+          -- unboxing also improves speed by ~50%
+          seen <- newArray bounds False :: ST s (STUArray s Pos Bool)
+          -- simple binary heap, much quicker than persistent-set-based queues;
+          -- size was big enough in testing
+          heap <- newArray (1, 2^10) undefined :: ST s (STArray s Int (Int, Pos))
+          heapSize <- newSTRef 0 :: ST s (STRef s Int)
+          let -- traceHeap = \ x -> do
+              --   size <- readSTRef heapSize
+              --   heapSlice <- mapM (readArray heap) [1..size]
+              --   trace (show heapSlice) x
+              heapPop = do
+                size <- readSTRef heapSize
+                -- when (size <= 0) $ fail "heapPop - empty heap"
+                head <- readArray heap 1
+                modifySTRef heapSize pred
+                when (size > 1) $ do
+                  readArray heap size >>= writeArray heap 1
+                  bubbleDown 1
+                return head
+              heapSwap = \ a b -> do
+                tmp <- readArray heap a
+                readArray heap b >>= writeArray heap a
+                writeArray heap b tmp
+                return ()
+              bubbleDown i = do
+                size <- readSTRef heapSize
+                let findTop = \ new old ->
+                      if new > size then return old
+                      else do
+                        swap <- ((<) `on` fst)
+                                <$> readArray heap new
+                                <*> readArray heap old
+                        return $ if swap then new else old
+                    left = 2*i
+                    right = 2*i + 1
+                top <- findTop left i >>= findTop right
+                when (top /= i) $ do
+                  heapSwap i top
+                  bubbleDown top
+              heapPush el = do
+                modifySTRef heapSize succ
+                idx <- readSTRef heapSize
+                writeArray heap idx el
+                bubbleUp idx
+                return ()
+              bubbleUp i
+                | i == 1 = return ()
+                | otherwise = do
+                let parent = div i 2
+                swap <- ((<) `on` fst)
+                        <$> readArray heap i
+                        <*> readArray heap parent
+                when swap $ do
+                  heapSwap i parent
+                  bubbleUp parent
+          heapPush (0, start)
+          fix $ \ loop -> do
+            (risk, pos) <- heapPop
+            if pos == end
+              then return risk
+              else do
+              let check = \ nb ->
+                    if inRange bounds nb
+                    then not <$> readArray seen nb
+                    else return False
+              filterM check (neighbours pos)
+                >>= mapM_ (\ nb -> do
+                              heapPush (risk + getRisk nb, nb)
+                              writeArray seen nb True)
+              loop
 
         neighbours :: Pos -> [Pos]
-        neighbours pos = map (zipPos (+) pos) [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        neighbours pos = map (addPos pos) [(-1, 0), (1, 0), (0, -1), (0, 1)]
