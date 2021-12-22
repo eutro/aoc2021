@@ -8,6 +8,7 @@ where
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Array as Arr
+import Data.Ix
 import Data.List
 import Data.Function
 import Debug.Trace
@@ -71,6 +72,10 @@ frequencies ls = Map.fromListWith (+) $ map (\ x -> (x, 1)) ls
 class UtilGrid a where
   gridBounds :: a -> ((Int, Int), (Int, Int))
   gridHasPos :: a -> (Int, Int) -> Bool
+  gridGetOrDflt :: a -> Bool -> (Int, Int) -> Bool
+  gridGetOrDflt grid dflt pos
+    | inRange (gridBounds grid) pos = gridHasPos grid pos
+    | otherwise = dflt
 
 type SparseGrid = Set.Set (Int, Int)
 type DenseGrid = Arr.Array (Int, Int) Bool
