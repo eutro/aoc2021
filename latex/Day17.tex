@@ -15,13 +15,8 @@ With initial y velocity \(j\), after \(n\) steps, the y position of the probe, \
 The time at which this intersects the target area is given by
 \begin{align*}
   & m_y \le y \le M_y \\
-  \iff & m_y \le \frac{-n^2 + n(2j + 1)}{2} \le M_y \\
-  \iff & 2m_y \le -n^2 + n(2j + 1) \le 2M_y \\
-  \iff & 2m_y \le -(n - \frac{2j + 1}{2})^2 + (\frac{2j + 1}{2})^2 \le 2M_y \\
-  \iff & 2m_y - (\frac{2j + 1}{2})^2 \le -(n - \frac{2j + 1}{2})^2 \le 2M_y - (\frac{2j + 1}{2})^2 \\
-  \iff & (\frac{2j + 1}{2})^2 - 2m_y \ge (n - \frac{2j + 1}{2})^2 \ge (\frac{2j + 1}{2})^2 - 2M_y \\
-  \iff & \sqrt{(\frac{2j + 1}{2})^2 - 2m_y} \ge n - \frac{2j + 1}{2} \ge \sqrt{(\frac{2j + 1}{2})^2 - 2M_y} \\
-  \iff & \frac{2j + 1}{2} + \sqrt{(\frac{2j + 1}{2})^2 - 2m_y} \ge n \ge \frac{2j + 1}{2} + \sqrt{(\frac{2j + 1}{2})^2 - 2M_y}
+  \iff & \frac{2j + 1 + \sqrt{(2j + 1)^2 - 8m_y}}{2} \\
+  & \le y \le \frac{2j + 1 + \sqrt{(2j + 1)^2 - 8M_y}}{2}
 \end{align*}
 
 With initial x velocity \(i \ge 0\), the x position after \(n\) steps, \(x\), is given by
@@ -33,18 +28,30 @@ With initial x velocity \(i \ge 0\), the x position after \(n\) steps, \(x\), is
   \end{cases} \\
   &=
   \begin{cases}
-    \sum_{r=1}^{i}r - \sum_{r=1}^{n-1}{r} & n \le i \\
+    \sum_{r=0}^{n-1}(i - r) & n \le i \\
     \sum_{r=1}^{i}r & n > i
   \end{cases} \\
   &=
   \begin{cases}
-    \frac{i^2 + i}{2} - \frac{n^2 - n}{2} & n \le i \\
-    \frac{i^2 + i}{2} & n > i
-  \end{cases} \\
-  &=
-  \begin{cases}
-    \frac{(i+n)(i-n+1)}{2} & n \le i \\
+    \frac{-n^2 + (2i + 1)n}{2} & n \le i \\
     \frac{i^2 + i}{2} & n > i
   \end{cases}
 \end{align*}
+
+\begin{align*}
+  & m_x \le \frac{-n^2 + (2i + 1)n}{2} \le M_x \\
+  \implies & 2m_x \le -n^2 + 2in + n \le 2M_x \\
+  \implies & \frac{2m_x}{n} \le -n + 2i + 1 \le \frac{2M_x}{n} \\
+  \implies & \frac{2m_x}{n} + n - 1 \le 2i \le \frac{2M_x}{n} + n - 1 \\
+  \implies & \frac{m_x}{n} + \frac{n - 1}{2} \le i \le \frac{M_x}{n} + \frac{n - 1}{2}
+\end{align*}
+
+\begin{align*}
+  & m_x \le \frac{n^2 + n}{2} \le M_x \\
+  \implies & 2m_x \le n^2 + n \le 2M_x \\
+  \implies & 2m_x \le (n + \frac{1}{2})^2 - \frac{1}{4} \le 2M_x \\
+  \implies & -\frac{1}{2} + \sqrt{2m_x + \frac{1}{4}} \le \\
+  & n \le -\frac{1}{2} + \sqrt{2M_x + \frac{1}{4}}
+\end{align*}
+
 \end{document}
