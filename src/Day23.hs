@@ -64,17 +64,15 @@ main = do
           let amphs = head path
           if amphs `Set.member` seen
             then dijkstras' target
+            else if amphs == target
+            then return (energy, path)
             else do
             modify $ Set.insert amphs
             let states = map (mapRight (:path))
                          $ filter ((`Set.notMember` seen) . snd)
                          $ nextStates target energy amphs
-                output = listToMaybe $ filter ((==target) . head . snd) states
-            case output of
-              Just ret -> return ret
-              _ -> do
-                lift $ modify $ Set.union $ Set.fromList $ states
-                dijkstras' target
+            lift $ modify $ Set.union $ Set.fromList $ states
+            dijkstras' target
 
         nextStates :: Amphs -> Int -> Amphs -> [(Int, Amphs)]
         nextStates target energy amphs = do
