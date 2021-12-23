@@ -60,7 +60,8 @@ main = do
                       (Int, [Amphs])
         dijkstras' target = do
           seen <- get
-          (energy, path@(amphs:_)) <- lift $ state Set.deleteFindMin
+          (energy, path) <- lift $ state Set.deleteFindMin
+          let amphs = head path
           if amphs `Set.member` seen
             then dijkstras' target
             else do
