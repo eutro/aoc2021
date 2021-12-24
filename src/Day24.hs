@@ -141,7 +141,7 @@ inferTys insns = run3
 
         inferTyAndSet insn = do
           (reg, ty) <- inferTy insn
-          trace (show insn ++ " :: " ++ show ty) $ return ()
+          -- trace (show insn ++ " :: " ++ show ty) $ return ()
           lift $ modify (//[(reg, ty)])
 
         assertZTrue = do
