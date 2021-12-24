@@ -14,7 +14,7 @@ import Data.Function
 import Debug.Trace
 import Pairs
 
-splitS :: (String -> Bool) -> String -> [String]
+splitS :: ([a] -> Bool) -> [a] -> [[a]]
 splitS pred s = case dropWhile pred (init $ tails s) of
   [] -> []
   s' -> (map head w) : s'''
@@ -24,10 +24,10 @@ splitS pred s = case dropWhile pred (init $ tails s) of
                (s''':_) -> splitS pred s'''
                [] -> []
 
-split :: (Char -> Bool) -> String -> [String]
+split :: (a -> Bool) -> [a] -> [[a]]
 split p = splitS (p . head)
 
-splitOn :: String -> String -> [String]
+splitOn :: Eq a => [a] -> [a] -> [[a]]
 splitOn ss s = let (h : tail) = splitS (isPrefixOf ss) s
                in h : (map (drop (length ss - 1)) tail)
 
