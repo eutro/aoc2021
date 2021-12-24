@@ -137,11 +137,11 @@ inferTys insns = run3
         inferAll insns = do
           mapM_ inferTyAndSet insns
           assertZTrue
-          lift $ (!Z) <$> get
+          lift $ (! Z) <$> get
 
         inferTyAndSet insn = do
           (reg, ty) <- inferTy insn
-          -- trace (show insn ++ " :: " ++ show ty) $ return ()
+          trace (show insn ++ " :: " ++ show ty) $ return ()
           lift $ modify (//[(reg, ty)])
 
         assertZTrue = do
