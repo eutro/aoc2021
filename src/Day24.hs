@@ -162,10 +162,10 @@ inferTys insns = run3
           assertZTrue
           return (reg, TyVar i 0)
         inferTy (Math op reg arg) = do
-          regTy <- lift $ (!reg) <$> get
+          regTy <- lift $ (! reg) <$> get
           argTy <-
             case arg of
-              RegPh r -> lift $ (!r) <$> get
+              RegPh r -> lift $ (! r) <$> get
               ValPh i -> return $ TyConst $ toInteger i
           if op == Eql
             then return (reg, tyCmp regTy argTy (TyConst 1) (TyConst 0))
