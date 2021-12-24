@@ -1,62 +1,73 @@
 import qualified Data.Map as Map
-import qualified Data.Set as Set
 import qualified Text.ParserCombinators.ReadP as RP
 import Bits
 
-data Reg = W | X | Y | Z deriving (Ord, Eq, Enum, Ix, Show)
-data Ph = RegPh Reg | ValPh Int deriving (Show, Eq)
-data MathOp = Add | Mul | Div | Mod | Eql deriving (Ord, Eq, Enum, Show)
-data Insn =
-  Inp Reg |
-  Math MathOp Reg Ph
-  deriving (Eq, Show)
+data Reg = W | X | Y | Z deriving (Ord, Eq, Enum, Ix)
+instance Read Reg where
+  readsPrec _ ('w':r) = [(W, r)]
+  readsPrec _ ('x':r) = [(X, r)]
+  readsPrec _ ('y':r) = [(Y, r)]
+  readsPrec _ ('z':r) = [(Z, r)]
+  readsPrec _ _ = []
+instance Show Reg where
+  show W = "w"
+  show X = "x"
+  show Y = "y"
+  show Z = "z"
 
-data Constraint = Constraint
-  {inA::Int, diff::Int, inB::Int}
-  deriving (Show)
+data Ph = RegPh Reg | ValPh Int deriving (Eq)
+instance Read Ph where
+  readsPrec _ = RP.readP_to_S $
+    (RegPh <$> RP.readS_to_P reads) RP.<++
+    (ValPh <$> RP.readS_to_P reads)
+instance Show Ph where
+  show (RegPh reg) = show reg
+  show (ValPh val) = show val
+
+data MathOp = Add | Mul | Div | Mod | Eql deriving (Ord, Eq, Enum)
+instance Show MathOp where
+  show Add = "add"
+  show Mul = "mul"
+  show Div = "div"
+  show Mod = "mod"
+  show Eql = "eql"
+instance Read MathOp where
+  readsPrec _ ('a':'d':'d':r) = [(Add, r)]
+  readsPrec _ ('m':'u':'l':r) = [(Mul, r)]
+  readsPrec _ ('d':'i':'v':r) = [(Div, r)]
+  readsPrec _ ('m':'o':'d':r) = [(Mod, r)]
+  readsPrec _ ('e':'q':'l':r) = [(Eql, r)]
+  readsPrec _ _ = []
+
+data Insn = Inp Reg | Math MathOp Reg Ph deriving (Eq)
+instance Show Insn where
+  show (Inp reg) = show reg
+  show (Math op reg ph) = show op ++ " " ++ show reg ++ " " ++ show ph
+instance Read Insn where
+  readsPrec _ = RP.readP_to_S $
+    (fmap Inp $ RP.string "inp " >> RP.readS_to_P reads) RP.<++
+    (Math
+     <$> (RP.readS_to_P reads <* RP.char ' ')
+     <*> (RP.readS_to_P reads <* RP.char ' ')
+     <*> (RP.readS_to_P reads))
+
+data Constraint = Constraint {inA::Int, diff::Int, inB::Int} deriving (Show)
 
 main :: IO ()
-main = do
-  input <- parseInput <$> getContents
-  let (mm, mM) = extremeConstraints $ insnsToConstraints input
-  putStrLn $ map intToDigit mM
-  putStrLn $ map intToDigit mm
-  return ()
-  where parseInput str = insns
-          where insns = map readInsn
-                  $ filter (not . isComment)
-                  $ takeWhile (/="## EOF")
-                  $ lines str
-                isComment [] = True
-                isComment ('#':_) = True
-                isComment _ = False
-                parseReg "w" = W
-                parseReg "x" = X
-                parseReg "y" = Y
-                parseReg "z" = Z
-                readInsn str = parseParts parts
-                  where parts = splitOn " " str
-                        parseOp = (Map.!)
-                                  (Map.fromList $ zip
-                                   ["add", "mul", "div", "mod", "eql"]
-                                   [Add, Mul, Div, Mod, Eql])
-                        parseParts ["inp", reg] = Inp (parseReg reg)
-                        parseParts [op, reg, ph] = Math (parseOp op) (parseReg reg) (parsePh ph)
-                        parsePh ph = case reads ph of
-                                       [(int, _)] -> ValPh int
-                                       _ -> RegPh $ parseReg ph
-
-        insnsToConstraints :: [Insn] -> [Constraint]
+main = map read <$> lines <$> getContents
+  >>= uncurry (on (>>) (putStrLn . map intToDigit))
+  . swap . extremes . insnsToConstraints
+  where insnsToConstraints :: [Insn] -> [Constraint]
         insnsToConstraints insns = constraints
           where subPrograms = splitOn [Inp W] insns
-                pairs = sequence $ zipWith compileSubprogram [0..] subPrograms
-                constraints = execState (evalStateT pairs []) []
+                constraintsM = sequence $ zipWith compileSubprogram [0..] subPrograms
+                constraints = execState (evalStateT constraintsM []) []
                 compileSubprogram :: Int -> [Insn] -> (StateT [(Int, Int)]) (State [Constraint]) ()
                 compileSubprogram i
                   [Math Mul X (ValPh 0)
                   ,Math Add X (RegPh Z)
                   ,Math Mod X (ValPh 26)
-                  ,Math Div Z (ValPh maybePop)
+                  ,Math Div Z (ValPh maybePop) -- 1 or 26, 50% of the time each
                   ,Math Add X (ValPh offA)
                   ,Math Eql X (RegPh W)
                   ,Math Eql X (ValPh 0) -- x = (z % 26 + offA) != w
@@ -85,19 +96,14 @@ main = do
                   | maybePop == 26 = do
                       (j, ob) <- state $ fromJust . uncons
                       lift $ modify (Constraint j (ob + offA) i :)
-                compileSubprogram _ insns = error $ "huh? " ++ show insns
 
-        maximiseDiff diff
-          | diff < 0 = (9, 9 + diff)
-          | otherwise = (9 - diff, 9)
-
-        minimiseDiff diff
-          | diff < 0 = (1 - diff, 1)
-          | otherwise = (1, 1 + diff)
-
-        extremeConstraints :: [Constraint] -> ([Int], [Int])
-        extremeConstraints cnstrs = unzip $ map snd $ sortBy (compare `on` fst) $ do
+        extremes :: [Constraint] -> ([Int], [Int])
+        extremes cnstrs = unzip $ map snd $ sortBy (compare `on` fst) $ do
           Constraint i diff j <- cnstrs
-          let (im, jm) = minimiseDiff diff
-          let (iM, jM) = maximiseDiff diff
+          let (im, jm)
+                | diff < 0 = (9, 9 + diff)
+                | otherwise = (9 - diff, 9)
+              (iM, jM)
+                | diff < 0 = (1 - diff, 1)
+                | otherwise = (1, 1 + diff)
           [(i, (im, iM)), (j, (jm, jM))]
