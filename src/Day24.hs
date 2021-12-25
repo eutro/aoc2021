@@ -179,11 +179,11 @@ tyCmp aTy bTy eqvTy (TyCmp a b c d) | aTy == a && bTy == b = tyCmp aTy bTy eqvTy
 tyCmp _ _ eqvTy neqTy | eqvTy == neqTy = eqvTy
 tyCmp (TyConst a) (TyConst b) eqvTy neqTy | a == b = eqvTy | otherwise = neqTy
 tyCmp (TyConst k) (TyVar b i) eqvTy neqTy | not $ inRange (1,9) (k - i) = neqTy
+tyCmp a@(TyVar _ _) b@(TyConst _) eqvTy neqTy = tyCmp b a eqvTy neqTy
 tyCmp (TyVar i a) (TyVar j b) eqvTy neqTy
   | i == j && a == b = eqvTy
   | i == j = neqTy
   | abs (a - b) >= 9 = neqTy
-tyCmp a@(TyVar _ _) b@(TyConst _) eqvTy neqTy = tyCmp b a eqvTy neqTy
 tyCmp aTy bTy eqvTy neqTy = TyCmp aTy bTy eqvTy neqTy
 
 tyMath :: MathOp -> Ty -> Ty -> Ty
@@ -210,7 +210,7 @@ tyMath Add (TyVar _ _) (TyVar _ _) = Poison
 tyMath Div (TyPoly26 (_:rest)) (TyConst 26) | null rest = TyConst 0 | otherwise = TyPoly26 rest
 tyMath Mod (TyPoly26 (v:_)) (TyConst 26) = v
 tyMath Mod lhs@(TyVar i b) (TyConst 26) | b + 9 <= 25 = lhs
-tyMath op coeff ty = error $ "No op " ++ (show op) ++ " " ++ (show coeff) ++ " and " ++ (show ty)
+tyMath op lhs rhs = error $ "No op " ++ (show op) ++ " " ++ (show lhs) ++ " and " ++ (show rhs)
 
 mathOp :: (Integral a) => MathOp -> a -> a -> a
 mathOp Add = (+)
