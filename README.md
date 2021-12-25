@@ -21,3 +21,12 @@ There's some scripts to help:
 - `./run.sh <day> [--]`: run the solution for the given day. Always
   recompile. If `--` is not provided, fetch input (with `fetch.sh`) if
   not yet downloaded. With `--`, just read input from stdin.
+
+## What on earth does `(($) >>= (.) . ($ (>>)) . (.) . flip (.))` mean?
+
+Most of the solutions have been rewritten in [point-free
+style](https://en.wikipedia.org/wiki/Tacit_programming) for fun.
+These solutions are not meant to be read, and most of them are, in
+fact, quite incomprehensible. They are almost always entirely
+equivalent to the normal, "pointful" solutions, which are preserved
+below the point-free ones, usually with the function name `main1`.
