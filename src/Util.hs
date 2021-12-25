@@ -120,3 +120,6 @@ type FoldFn a b = a -> b -> a
 
 mod1 :: Int -> Int -> Int
 mod1 a b = succ $ (`mod` b) $ pred a
+
+memoisedOver :: Ix a => (a -> b) -> (a, a) -> a -> b
+f `memoisedOver` domain = (Arr.!) $ Arr.listArray domain $ map f $ range domain

@@ -57,9 +57,6 @@ main1 = do
                           | otherwise = mapBoth (freq*) $ swap $ quantumDie (p2, p1')
                           where p1' = stepPlayer roll p1
 
-                memoisedOver :: Ix a => (a -> b) -> (a, a) -> a -> b
-                f `memoisedOver` domain = (!) $ listArray domain $ map f $ range domain
-
                 playerDomain = (join (,) (Player 1 1), join (,) (Player 21 10))
 
                 tripleRolls :: [(Int, Integer)]
