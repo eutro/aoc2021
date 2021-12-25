@@ -2,6 +2,7 @@ module Bits
   (module Control.Monad,
    module Control.Applicative,
    module Control.Monad.State,
+   module Control.Monad.Reader,
    module Data.Functor.Identity,
    module Data.Array,
    module Data.List,
@@ -19,6 +20,7 @@ module Bits
 import Control.Monad
 import Control.Applicative
 import Control.Monad.State
+import Control.Monad.Reader
 import Data.Functor.Identity
 import Data.Array
 import Data.List
