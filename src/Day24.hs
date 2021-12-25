@@ -91,10 +91,9 @@ main = map read <$> lines <$> getContents
                   -- in[i] + offB
                   -- onto the "stack" z
                   | maybePop == 1 && offA >= 9 = modify ((i, offB):)
-                  -- if we are popping, we have to make sure
-                  -- we don't push after, so
+                  -- if we are popping, we have to make sure we don't push after, so
                   -- in[i]
-                  -- must be equal to the top value of the stack, which is
+                  -- must be equal to the top value of the stack, plus a, which is
                   -- in[j] + b + a
                   -- therefore
                   -- in[j] + a + b = in[i]
@@ -114,9 +113,10 @@ main = map read <$> lines <$> getContents
           [(i, (im, iM)), (j, (jm, jM))]
 
 data Ty
-  = TyVar Int Integer -- var + offset
+  = TyVar Int Integer -- { var + offset }
   | TyConst Integer
-  | TyPoly26 [Ty] -- a + b 26 + c 26^2 + ... + z 26^n
+  -- { a + b k + c k^2 + ... + z k^n | (a, b, c, ..., z) \in \product coeffs }
+  | TyPoly { k :: Integer, coeffs :: [Ty] }
   | TyCmp
     { aTy :: Ty
     , bTy :: Ty
