@@ -6,7 +6,7 @@ import Data.STRef
 import Data.Array.MArray
 import Bits
 
-data Room = Happy Int | Unhappy [Int]
+data Room = Room Int [Int]
   deriving (Ord, Eq, Show)
 
 type Rooms = Array Int Room
@@ -30,7 +30,7 @@ main = do
           where amphHallway = listArray (0,hallwayLen) $ replicate 11 Nothing
                 amphRooms =
                   listArray (1,4)
-                  $ map Unhappy
+                  $ map (Room 0)
                   $ transpose
                   $ map (mapMaybe (`Map.lookup` (Map.fromList $ zip "ABCD" [1,2,3,4])))
                   $ take 2
@@ -42,16 +42,16 @@ main = do
           Amphs
           (listArray (1,4) $ map mapRoom $ assocs $ rooms amphs)
           (hallway amphs)
-          where mapRoom (id, Unhappy room)
-                  | all (==id) room = Happy (length room)
-                mapRoom (_, raw) = raw
+          where mapRoom (id, Room happy unhappy) =
+                  Room (happy + length h) (reverse uh)
+                  where (h, uh) = span (==id) $ reverse unhappy
 
         augment :: Amphs -> Amphs
         augment amphs =
           Amphs
           (listArray (1,4)
-           [Unhappy [a,b,c,d]
-           | (Unhappy [a, d], [b, c]) <- zip
+           [Room 0 [a,b,c,d]
+           | (Room 0 [a, d], [b, c]) <- zip
              (elems $ rooms amphs)
              [[4,4], [3,2], [2,1], [1,3]] -- given in puzzle
            ])
@@ -59,12 +59,9 @@ main = do
 
         dijkstras :: Amphs -> Int
         dijkstras amphs = run amphs
-          where roomSize = findSize $ elems $ rooms amphs
+          where roomSize = roomFill $ rooms amphs ! 1
 
-                findSize (Unhappy l : _) = length l
-                findSize (_ : r) = findSize r
-
-                isFull (Happy fill) = fill == roomSize
+                isFull (Room fill []) = fill == roomSize
                 isFull _ = False
 
                 run :: Amphs -> Int
@@ -139,15 +136,10 @@ main = do
                       mapM_ heapPush states
                       loop
 
-        isHappy (Happy _) = True
+        isHappy (Room _ []) = True
         isHappy _ = False
 
-        roomFromList idx ls
-          | all (==idx) ls = Happy $ length ls
-          | otherwise = Unhappy ls
-
-        roomFill (Happy fill) = fill
-        roomFill (Unhappy l) = length l
+        roomFill (Room happy unhappy) = happy + length unhappy
 
         hallwayOpen :: Hallway -> Int -> [Int]
         hallwayOpen hallway from = left ++ right
@@ -165,7 +157,7 @@ main = do
           where movedFromHallway = do
                   (hallwayIdx, maybeAmph) <- assocs $ hallway amphs
                   toMove <- maybeToList maybeAmph
-                  Happy targetRoom <- return $ rooms amphs ! toMove
+                  Room targetRoom [] <- return $ rooms amphs ! toMove
                   guard (all
                          (isNothing . (hallway amphs!))
                          (pathBetween hallwayIdx (2*toMove)))
@@ -174,18 +166,17 @@ main = do
                      ((abs $ 2*toMove - hallwayIdx) + -- along hallway
                       (roomSize - targetRoom)), -- into room
                      Amphs
-                     (rooms amphs // [(toMove, Happy $ succ targetRoom)])
+                     (rooms amphs // [(toMove, Room (succ targetRoom) [])])
                      (hallway amphs // [(hallwayIdx, Nothing)]))
                 movedFromRoom = do
-                  (roomIdx, Unhappy inRoom) <- assocs $ rooms amphs
+                  (roomIdx, Room happy (toMove:restInRoom)) <- assocs $ rooms amphs
                   -- don't bother popping from a happy room,
-                  let (toMove:restInRoom) = inRoom
-                      open = hallwayOpen (hallway amphs) (2*roomIdx)
+                  let open = hallwayOpen (hallway amphs) (2*roomIdx)
                       targetRoom = (rooms amphs ! toMove)
-                      oldRoom = roomFromList roomIdx restInRoom
+                      oldRoom = Room happy restInRoom
                   if isHappy targetRoom && (2*toMove) `elem` open
                     then do
-                    let Happy inTarget = targetRoom
+                    let Room inTarget [] = targetRoom
                     return -- move direclty into target room
                       ((energies ! toMove) *
                        ((roomSize - roomFill oldRoom) + -- out of room
@@ -194,7 +185,7 @@ main = do
                        Amphs
                        (rooms amphs //
                         [(roomIdx, oldRoom),
-                         (toMove, Happy $ succ inTarget)])
+                         (toMove, Room (succ inTarget) [])])
                        (hallway amphs))
                     else do
                     hallwaySlot <- open
@@ -214,14 +205,11 @@ instance Hash a => Hash [a] where hash l = foldl ((+) . (*31)) 0 $ map hash l
 instance (Hash a, Hash b) => Hash (a, b) where hash (x, y) = 27 * hash x + hash y
 instance (Hash a, Hash b) => Hash (Array a b) where hash arr = hash ((bounds arr), elems arr)
 instance Hash Amphs where hash (Amphs a b) = hash (a, b)
+instance Hash Room where hash (Room x y) = hash (x, y)
 
 instance Hash a => Hash (Maybe a) where
   hash (Just x) = 2 * hash x + 1
   hash Nothing = 0
-
-instance Hash Room where
-  hash (Happy i) = i
-  hash (Unhappy l) = 8 * hash l
 
 hashSpread :: Hash k => k -> Int
 hashSpread key = h `xor` (h `shiftR` 16)
