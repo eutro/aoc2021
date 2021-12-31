@@ -1,5 +1,9 @@
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Control.Monad.ST
+import Data.Array.ST
+import Data.STRef
+import Data.Array.MArray
 import Bits
 
 data Room = Happy Int | Unhappy [Int]
@@ -54,10 +58,8 @@ main = do
           (hallway amphs)
 
         dijkstras :: Amphs -> Int
-        dijkstras amphs = run'
-          where run = evalStateT loop Set.empty
-                run' = evalState run $ Set.fromList [(0, amphs)]
-                roomSize = findSize $ elems $ rooms amphs
+        dijkstras amphs = run amphs
+          where roomSize = findSize $ elems $ rooms amphs
 
                 findSize (Unhappy l : _) = length l
                 findSize (_ : r) = findSize r
@@ -65,23 +67,27 @@ main = do
                 isFull (Happy fill) = fill == roomSize
                 isFull _ = False
 
-                loop :: (StateT (Set.Set Amphs))
-                        (State (Set.Set (Int, Amphs)))
-                        Int
-                loop = do
-                  seen <- get
-                  (energy, amphs) <- lift $ state Set.deleteFindMin
-                  if amphs `Set.member` seen
-                    then loop
-                    else if all isFull $ elems $ rooms amphs
-                    then return energy
-                    else do
-                    modify $ Set.insert amphs
-                    let states = map (mapLeft (energy+))
-                          $ filter ((`Set.notMember` seen) . snd)
-                          $ nextStates roomSize amphs
-                    lift $ modify $ Set.union $ Set.fromList $ states
-                    loop
+                run :: Amphs -> Int
+                run start = runST $ do
+                  seenR <- newSTRef Set.empty
+                           :: ST s (STRef s (Set.Set Amphs))
+                  heap <- newSTRef $ Set.singleton (0, start)
+                          :: ST s (STRef s (Set.Set (Int, Amphs)))
+                  fix $ \ loop -> do
+                    seen <- readSTRef seenR
+                    ((energy, amphs), rem) <- Set.deleteFindMin <$> readSTRef heap
+                    writeSTRef heap rem
+                    if amphs `Set.member` seen
+                      then loop
+                      else if all isFull $ elems $ rooms amphs
+                      then return energy
+                      else do
+                      modifySTRef' seenR $ Set.insert amphs
+                      let states = map (mapLeft (energy+))
+                            $ filter ((`Set.notMember` seen) . snd)
+                            $ nextStates roomSize amphs
+                      modifySTRef' heap $ Set.union $ Set.fromList $ states
+                      loop
 
         isHappy (Happy _) = True
         isHappy _ = False
