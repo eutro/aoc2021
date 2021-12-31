@@ -69,24 +69,74 @@ main = do
 
                 run :: Amphs -> Int
                 run start = runST $ do
-                  seenR <- newSTRef Set.empty
-                           :: ST s (STRef s (Set.Set Amphs))
-                  heap <- newSTRef $ Set.singleton (0, start)
-                          :: ST s (STRef s (Set.Set (Int, Amphs)))
+                  seenH <- newHash (2^18) :: ST s (Hashtable s Amphs ())
+                  heap <- newArray (1, 2^16) undefined :: ST s (STArray s Int (Int, Amphs))
+                  -- heapIndex <- newHash (2^16) :: ST s (Hashtable s Amphs Int)
+                  heapSize <- newSTRef 0 :: ST s (STRef s Int)
+                  let heapPop = do
+                        size <- readSTRef heapSize
+                        head <- readArray heap 1
+                        modifySTRef heapSize pred
+                        when (size > 1) $ do
+                          readArray heap size >>= writeArray heap 1
+                          bubbleDown 1
+                        return head
+                      heapSwap = \ a b -> do
+                        ap@(_, av) <- readArray heap a
+                        bp@(_, bv) <- readArray heap b
+                        writeArray heap a bp
+                        writeArray heap b ap
+                        -- hashPut heapIndex av b
+                        -- hashPut heapIndex bv a
+                        return ()
+                      bubbleDown i = do
+                        size <- readSTRef heapSize
+                        let findTop = \ new old ->
+                              if new > size then return old
+                              else do
+                                swap <- ((<) `on` fst)
+                                        <$> readArray heap new
+                                        <*> readArray heap old
+                                return $ if swap then new else old
+                            left = 2*i
+                            right = 2*i + 1
+                        top <- findTop left i >>= findTop right
+                        when (top /= i) $ do
+                          heapSwap i top
+                          bubbleDown top
+                      heapPush el@(k, v) = do
+                        -- shouldAdd <- maybe True (k<) <$> hashRef heapIndex v
+                        -- when shouldAdd $ do
+                          modifySTRef heapSize succ
+                          idx <- readSTRef heapSize
+                          writeArray heap idx el
+                          -- hashPut heapIndex v idx
+                          bubbleUp idx
+                          return ()
+                      bubbleUp i
+                        | i == 1 = return ()
+                        | otherwise = do
+                        let parent = div i 2
+                        swap <- ((<) `on` fst)
+                                <$> readArray heap i
+                                <*> readArray heap parent
+                        when swap $ do
+                          heapSwap i parent
+                          bubbleUp parent
+                  heapPush (0, start)
                   fix $ \ loop -> do
-                    seen <- readSTRef seenR
-                    ((energy, amphs), rem) <- Set.deleteFindMin <$> readSTRef heap
-                    writeSTRef heap rem
-                    if amphs `Set.member` seen
+                    (energy, amphs) <- heapPop
+                    hasSeen <- hashContains seenH amphs
+                    if hasSeen
                       then loop
                       else if all isFull $ elems $ rooms amphs
                       then return energy
                       else do
-                      modifySTRef' seenR $ Set.insert amphs
-                      let states = map (mapLeft (energy+))
-                            $ filter ((`Set.notMember` seen) . snd)
-                            $ nextStates roomSize amphs
-                      modifySTRef' heap $ Set.union $ Set.fromList $ states
+                      hashPut seenH amphs ()
+                      let nbs = nextStates roomSize amphs
+                      nbs' <- filterM (fmap not . (hashContains seenH) . snd) nbs
+                      let states = map (mapLeft (energy+)) nbs'
+                      mapM_ heapPush states
                       loop
 
         isHappy (Happy _) = True
@@ -156,3 +206,53 @@ main = do
                        Amphs
                        (rooms amphs // [(roomIdx, oldRoom)])
                        (hallway amphs // [(hallwaySlot, Just toMove)]))
+
+class Hash a where hash :: a -> Int
+
+instance Hash Int where hash = id
+instance Hash a => Hash [a] where hash l = foldl ((+) . (*31)) 0 $ map hash l
+instance (Hash a, Hash b) => Hash (a, b) where hash (x, y) = 27 * hash x + hash y
+instance (Hash a, Hash b) => Hash (Array a b) where hash arr = hash ((bounds arr), elems arr)
+instance Hash Amphs where hash (Amphs a b) = hash (a, b)
+
+instance Hash a => Hash (Maybe a) where
+  hash (Just x) = 2 * hash x + 1
+  hash Nothing = 0
+
+instance Hash Room where
+  hash (Happy i) = i
+  hash (Unhappy l) = 8 * hash l
+
+hashSpread :: Hash k => k -> Int
+hashSpread key = h `xor` (h `shiftR` 16)
+  where h = hash key
+
+data Hashtable s k v = Hashtable { hashSize :: Int, buckets :: STArray s Int [(k, v)] }
+newHash :: Int -> ST s (Hashtable s k v)
+newHash size = Hashtable size <$> newArray (0, size) []
+
+hashSeq :: Hashtable s k v -> ST s [(k, v)]
+hashSeq (Hashtable _ buckets) = concat <$> getElems buckets
+
+hashPut :: (Hash k, Eq k) => Hashtable s k v -> k -> v -> ST s ()
+hashPut (Hashtable size buckets) key val = do
+  let bucketNo = hash key `mod` size
+  bucket <- readArray buckets bucketNo
+  let filteredBucket = filter ((/=key) . fst) bucket
+      newBucket = (key, val) : filteredBucket
+  -- if (not $ null filteredBucket)
+  --   then trace ("Hash collision! " ++ (show $ hashSpread key))
+  --        $ return
+  --        $ length filteredBucket
+  --   else return 0
+  writeArray buckets bucketNo newBucket
+  return ()
+
+hashRef :: (Hash k, Eq k) => Hashtable s k v -> k -> ST s (Maybe v)
+hashRef (Hashtable size buckets) key = do
+  let bucketNo = hash key `mod` size
+  bucket <- readArray buckets bucketNo
+  return $ fmap snd $ listToMaybe $ filter ((==key) . fst) bucket
+
+hashContains :: (Hash k, Eq k) => Hashtable s k v -> k -> ST s Bool
+hashContains hash key = isJust <$> hashRef hash key
