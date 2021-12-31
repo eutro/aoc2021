@@ -2,7 +2,10 @@ import qualified Data.Map as Map
 import qualified Data.Set as Set
 import Bits
 
-type Rooms = Array Int [Int]
+data Room = Happy Int | Unhappy [Int]
+  deriving (Ord, Eq, Show)
+
+type Rooms = Array Int Room
 type Hallway = Array Int (Maybe Int)
 
 data Amphs = Amphs
@@ -23,50 +26,72 @@ main = do
           where amphHallway = listArray (0,hallwayLen) $ replicate 11 Nothing
                 amphRooms =
                   listArray (1,4)
+                  $ map Unhappy
                   $ transpose
                   $ map (mapMaybe (`Map.lookup` (Map.fromList $ zip "ABCD" [1,2,3,4])))
                   $ take 2
                   $ drop 2
                   $ lines str
 
+        normaliseRooms :: Amphs -> Amphs
+        normaliseRooms amphs =
+          Amphs
+          (listArray (1,4) $ map mapRoom $ assocs $ rooms amphs)
+          (hallway amphs)
+          where mapRoom (id, Unhappy room)
+                  | all (==id) room = Happy (length room)
+                mapRoom (_, raw) = raw
+
         augment :: Amphs -> Amphs
         augment amphs =
           Amphs
           (listArray (1,4)
-           [ [a,b,c,d]
-           | ([a, d], [b, c]) <- zip
+           [Unhappy [a,b,c,d]
+           | (Unhappy [a, d], [b, c]) <- zip
              (elems $ rooms amphs)
              [[4,4], [3,2], [2,1], [1,3]] -- given in puzzle
            ])
           (hallway amphs)
 
         dijkstras :: Amphs -> Int
-        dijkstras amphs = fst run'
+        dijkstras amphs = run'
           where run = evalStateT loop Set.empty
-                run' = evalState run $ Set.fromList [(0, [(0, amphs)])]
-                roomSize = length (rooms amphs ! 1)
+                run' = evalState run $ Set.fromList [(0, amphs)]
+                roomSize = findSize $ elems $ rooms amphs
+
+                findSize (Unhappy l : _) = length l
+                findSize (_ : r) = findSize r
+
+                isFull (Happy fill) = fill == roomSize
+                isFull _ = False
 
                 loop :: (StateT (Set.Set Amphs))
-                        (State (Set.Set (Int, [(Int, Amphs)])))
-                        (Int, [(Int, Amphs)])
+                        (State (Set.Set (Int, Amphs)))
+                        Int
                 loop = do
                   seen <- get
-                  (energy, path) <- lift $ state Set.deleteFindMin
-                  let (_, amphs) = head path
+                  (energy, amphs) <- lift $ state Set.deleteFindMin
                   if amphs `Set.member` seen
                     then loop
-                    else if (all isNothing $ hallway amphs) &&
-                            (all
-                             (\ (roomIdx, inside) -> all (==roomIdx) inside)
-                             (assocs $ rooms amphs))
-                    then return (energy, path)
+                    else if all isFull $ elems $ rooms amphs
+                    then return energy
                     else do
                     modify $ Set.insert amphs
-                    let states = map (\ nb@(w,_) -> (energy + w, (nb:path)))
+                    let states = map (mapLeft (energy+))
                           $ filter ((`Set.notMember` seen) . snd)
                           $ nextStates roomSize amphs
                     lift $ modify $ Set.union $ Set.fromList $ states
                     loop
+
+        isHappy (Happy _) = True
+        isHappy _ = False
+
+        roomFromList idx ls
+          | all (==idx) ls = Happy $ length ls
+          | otherwise = Unhappy ls
+
+        roomFill (Happy fill) = fill
+        roomFill (Unhappy l) = length l
 
         hallwayOpen :: Hallway -> Int -> [Int]
         hallwayOpen hallway from = left ++ right
@@ -84,46 +109,44 @@ main = do
           where movedFromHallway = do
                   (hallwayIdx, maybeAmph) <- assocs $ hallway amphs
                   toMove <- maybeToList maybeAmph
-                  let targetRoom = (rooms amphs ! toMove)
-                  guard (all (==toMove) targetRoom)
+                  Happy targetRoom <- return $ rooms amphs ! toMove
                   guard (all
                          (isNothing . (hallway amphs!))
                          (pathBetween hallwayIdx (2*toMove)))
                   return -- move into destination room
                     ((energies ! toMove) *
                      ((abs $ 2*toMove - hallwayIdx) + -- along hallway
-                      (roomSize - length targetRoom)), -- into room
+                      (roomSize - targetRoom)), -- into room
                      Amphs
-                     (rooms amphs // [(toMove, toMove : targetRoom)])
+                     (rooms amphs // [(toMove, Happy $ succ targetRoom)])
                      (hallway amphs // [(hallwayIdx, Nothing)]))
                 movedFromRoom = do
-                  (roomIdx, inRoom) <- assocs $ rooms amphs
+                  (roomIdx, Unhappy inRoom) <- assocs $ rooms amphs
                   -- don't bother popping from a happy room,
-                  -- also guarantees at least one in the list
-                  guard (any (/=roomIdx) inRoom)
                   let (toMove:restInRoom) = inRoom
                       open = hallwayOpen (hallway amphs) (2*roomIdx)
                       targetRoom = (rooms amphs ! toMove)
-                  if (2*toMove) `elem` open &&
-                     (all (==roomIdx) targetRoom)
+                      oldRoom = roomFromList roomIdx restInRoom
+                  if isHappy targetRoom && (2*toMove) `elem` open
                     then do
+                    let Happy inTarget = targetRoom
                     return -- move direclty into target room
                       ((energies ! toMove) *
-                       ((roomSize - length restInRoom) + -- out of room
+                       ((roomSize - roomFill oldRoom) + -- out of room
                         (abs (2*roomIdx - 2*toMove)) + -- along hallway
-                        (roomSize - length targetRoom)), -- into room
+                        (roomSize - inTarget)), -- into room
                        Amphs
                        (rooms amphs //
-                        [(roomIdx, restInRoom),
-                         (toMove, toMove : targetRoom)])
+                        [(roomIdx, oldRoom),
+                         (toMove, Happy $ succ inTarget)])
                        (hallway amphs))
                     else do
                     hallwaySlot <- open
                     guard (hallwaySlot `notElem` [2,4..8])
                     return -- wait in hallway
                       ((energies ! toMove) *
-                       ((roomSize - length restInRoom) + -- out of room
+                       ((roomSize - roomFill oldRoom) + -- out of room
                         (abs $ 2*roomIdx - hallwaySlot)), -- along hallway
                        Amphs
-                       (rooms amphs // [(roomIdx, restInRoom)])
+                       (rooms amphs // [(roomIdx, oldRoom)])
                        (hallway amphs // [(hallwaySlot, Just toMove)]))
