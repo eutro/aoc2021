@@ -13,5 +13,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Compile solutions
+      run: ${{github.workspace}}/allcmp.sh || echo "Oh dear..."
     - name: Execute solutions
       run: ${{github.workspace}}/all.sh

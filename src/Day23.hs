@@ -76,7 +76,7 @@ main = do
                   let heapPop = do
                         size <- readSTRef heapSize
                         head <- readArray heap 1
-                        modifySTRef heapSize pred
+                        modifySTRef' heapSize pred
                         when (size > 1) $ do
                           readArray heap size >>= writeArray heap 1
                           bubbleDown 1
@@ -107,7 +107,7 @@ main = do
                       heapPush el@(k, v) = do
                         -- shouldAdd <- maybe True (k<) <$> hashRef heapIndex v
                         -- when shouldAdd $ do
-                          modifySTRef heapSize succ
+                          modifySTRef' heapSize succ
                           idx <- readSTRef heapSize
                           writeArray heap idx el
                           -- hashPut heapIndex v idx
@@ -227,32 +227,26 @@ hashSpread :: Hash k => k -> Int
 hashSpread key = h `xor` (h `shiftR` 16)
   where h = hash key
 
-data Hashtable s k v = Hashtable { hashSize :: Int, buckets :: STArray s Int [(k, v)] }
+data Hashtable s k v = Hashtable { hashSize :: Int, buckets :: STArray s Int (Map.Map k v) }
 newHash :: Int -> ST s (Hashtable s k v)
-newHash size = Hashtable size <$> newArray (0, size) []
+newHash size = Hashtable size <$> newArray (0, size) Map.empty
 
 hashSeq :: Hashtable s k v -> ST s [(k, v)]
-hashSeq (Hashtable _ buckets) = concat <$> getElems buckets
+hashSeq (Hashtable _ buckets) = concatMap Map.toList <$> getElems buckets
 
-hashPut :: (Hash k, Eq k) => Hashtable s k v -> k -> v -> ST s ()
+hashPut :: (Hash k, Eq k, Ord k) => Hashtable s k v -> k -> v -> ST s ()
 hashPut (Hashtable size buckets) key val = do
   let bucketNo = hash key `mod` size
   bucket <- readArray buckets bucketNo
-  let filteredBucket = filter ((/=key) . fst) bucket
-      newBucket = (key, val) : filteredBucket
-  -- if (not $ null filteredBucket)
-  --   then trace ("Hash collision! " ++ (show $ hashSpread key))
-  --        $ return
-  --        $ length filteredBucket
-  --   else return 0
+  let newBucket = Map.insert key val bucket
   writeArray buckets bucketNo newBucket
   return ()
 
-hashRef :: (Hash k, Eq k) => Hashtable s k v -> k -> ST s (Maybe v)
+hashRef :: (Hash k, Eq k, Ord k) => Hashtable s k v -> k -> ST s (Maybe v)
 hashRef (Hashtable size buckets) key = do
   let bucketNo = hash key `mod` size
   bucket <- readArray buckets bucketNo
-  return $ fmap snd $ listToMaybe $ filter ((==key) . fst) bucket
+  return $ Map.lookup key bucket
 
-hashContains :: (Hash k, Eq k) => Hashtable s k v -> k -> ST s Bool
+hashContains :: (Hash k, Eq k, Ord k) => Hashtable s k v -> k -> ST s Bool
 hashContains hash key = isJust <$> hashRef hash key
