@@ -146,9 +146,18 @@ main = do
           where left = takeWhile (isNothing . (hallway!)) $ reverse [0..pred from]
                 right = takeWhile (isNothing . (hallway!)) [succ from..hallwayLen]
 
+        filterCanStand :: [Int] -> [Int]
+        filterCanStand open = filter (`notElem` [2,4..8]) open
+
         pathBetween start end
           | start < end = [succ start..end]
           | otherwise = [end..pred start]
+
+        canStep :: Amphs -> Bool
+        canStep amphs = any canEmpty $ assocs $ rooms amphs
+          where canEmpty (i, Room _ unhappy) =
+                  length bufSpace >= length unhappy
+                  where bufSpace = filterCanStand $ hallwayOpen (hallway amphs) i
 
         energies = listArray (1,4) [1,10,100,1000]
 
@@ -188,15 +197,16 @@ main = do
                          (toMove, Room (succ inTarget) [])])
                        (hallway amphs))
                     else do
-                    hallwaySlot <- open
-                    guard (hallwaySlot `notElem` [2,4..8])
+                    hallwaySlot <- filterCanStand open
+                    let nextAmphs = Amphs
+                          (rooms amphs // [(roomIdx, oldRoom)])
+                          (hallway amphs // [(hallwaySlot, Just toMove)])
+                    guard (canStep nextAmphs)
                     return -- wait in hallway
                       ((energies ! toMove) *
                        ((roomSize - roomFill oldRoom) + -- out of room
                         (abs $ 2*roomIdx - hallwaySlot)), -- along hallway
-                       Amphs
-                       (rooms amphs // [(roomIdx, oldRoom)])
-                       (hallway amphs // [(hallwaySlot, Just toMove)]))
+                       nextAmphs)
 
 class Hash a where hash :: a -> Int
 
